@@ -1,0 +1,5 @@
+.env
+node_modules/
+uploads/verification/
+*.log
+.DS_Store

@@ -1,0 +1,88 @@
+const express = require('express');
+const router = express.Router();
+const Rental = require('../models/Rental');
+const authMiddleware = require('../middleware/auth');
+const { validateId } = require('../middleware/validateId');
+
+router.use(authMiddleware);
+
+// GET /api/tenant/rentals — aluguéis do inquilino
+router.get('/rentals', async (req, res) => {
+    try {
+        var rentals = await Rental.find({ tenants: req.user.userId, status: 'active' })
+            .populate('property', 'title address neighborhood price images')
+            .populate('owner', 'name')
+            .sort({ createdAt: -1 });
+        res.json({ rentals });
+    } catch (e) {
+        res.json({ rentals: [] });
+    }
+});
+
+// GET /api/tenant/payments — pagamentos pendentes do inquilino
+router.get('/payments', async (req, res) => {
+    try {
+        var rentals = await Rental.find({ tenants: req.user.userId })
+            .populate('property', 'title neighborhood');
+
+        var payments = [];
+        for (var rental of rentals) {
+            for (var p of rental.payments) {
+                if (p.tenant.toString() === req.user.userId) {
+                    payments.push({
+                        rentalId: rental._id,
+                        paymentId: p._id,
+                        property: rental.property,
+                        amount: p.amount,
+                        feeIncluded: p.feeIncluded,
+                        month: p.month,
+                        status: p.status,
+                        paidAt: p.paidAt
+                    });
+                }
+            }
+        }
+
+        payments.sort(function(a, b) { return a.month > b.month ? -1 : 1; });
+        res.json({ payments });
+    } catch (e) {
+        res.json({ payments: [] });
+    }
+});
+
+// POST /api/tenant/payments/:rentalId/:paymentId/pay — marcar como pago (simulado)
+router.post('/payments/:rentalId/:paymentId/pay', validateId('rentalId'), validateId('paymentId'), async (req, res) => {
+    try {
+        var rental = await Rental.findById(req.params.rentalId);
+        if (!rental) return res.status(404).json({ error: 'Aluguel não encontrado' });
+
+        var payment = rental.payments.id(req.params.paymentId);
+        if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
+
+        if (payment.tenant.toString() !== req.user.userId) {
+            return res.status(403).json({ error: 'Este pagamento não é seu' });
+        }
+
+        if (payment.status === 'paid') {
+            return res.status(400).json({ error: 'Pagamento já realizado' });
+        }
+
+        payment.status = 'paid';
+        payment.paidAt = new Date();
+        await rental.save();
+
+        res.json({
+            message: 'Pagamento confirmado!',
+            summary: {
+                valor: payment.amount,
+                taxaMoraJunto: payment.feeIncluded,
+                aluguel: payment.amount - payment.feeIncluded,
+                mes: payment.month
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao processar pagamento' });
+    }
+});
+
+module.exports = router;

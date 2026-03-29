@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 48" fill="none">
+  <!-- Symbol: Two connecting shapes forming a roof/home + people connection -->
+  <g>
+    <!-- Left person/shape -->
+    <path d="M12 28c0-6.627 5.373-12 12-12s12 5.373 12 12" stroke="#4338CA" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <!-- Right person/shape - overlapping -->
+    <path d="M20 28c0-6.627 5.373-12 12-12s12 5.373 12 12" stroke="#6366F1" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <!-- Roof/home shape above -->
+    <path d="M8 28L24 14L40 28" stroke="#4338CA" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Connection dot -->
+    <circle cx="24" cy="20" r="3" fill="#4338CA"/>
+    <circle cx="32" cy="20" r="3" fill="#6366F1"/>
+  </g>
+  <!-- Wordmark -->
+  <text x="56" y="34" font-family="Outfit, system-ui, sans-serif" font-size="28" fill="#111827">
+    <tspan font-weight="300">mora</tspan><tspan font-weight="700">junto</tspan>
+  </text>
+</svg>
