@@ -533,6 +533,20 @@ function animateStatsOnScroll() {
     document.querySelectorAll('.step-card, .diff-card, .property-card').forEach(el => {
         observer.observe(el);
     });
+
+    // Reveal observer for sections and grids
+    const revealObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                revealObserver.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.05 });
+
+    document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale').forEach(el => {
+        revealObserver.observe(el);
+    });
 }
 
 // ===== FEATURED PROPERTIES =====
