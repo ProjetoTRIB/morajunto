@@ -1,10 +1,63 @@
-/* ===== AlugaJá — Frontend Script ===== */
+/* ===== MoraJunto — Frontend Script ===== */
 
 const API = window.location.origin + '/api';
 let currentUser = null;
 let currentToken = localStorage.getItem('alugaja_token');
 let selectedBedrooms = 0;
 let currentPropertyId = null;
+
+// ===== TOAST NOTIFICATIONS =====
+const _toastIcons = {
+    success: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    error: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    warning: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    info: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+};
+
+function showToast(message, type) {
+    type = type || 'info';
+    var container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    var toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.innerHTML = (_toastIcons[type] || _toastIcons.info) +
+        '<span>' + message + '</span>' +
+        '<button class="toast-close" onclick="this.parentElement.classList.remove(\'toast-enter\');this.parentElement.classList.add(\'toast-exit\');setTimeout(()=>this.parentElement.remove(),350)">&times;</button>';
+
+    container.appendChild(toast);
+
+    // Max 3 toasts
+    while (container.children.length > 3) {
+        container.children[0].remove();
+    }
+
+    requestAnimationFrame(function() {
+        toast.classList.add('toast-enter');
+    });
+
+    setTimeout(function() {
+        if (toast.parentElement) {
+            toast.classList.remove('toast-enter');
+            toast.classList.add('toast-exit');
+            setTimeout(function() { toast.remove(); }, 350);
+        }
+    }, 4000);
+}
+
+// ===== BUTTON LOADING STATE =====
+function setLoading(btn, loading) {
+    if (!btn) return;
+    if (loading) {
+        btn._origText = btn.textContent;
+        btn.classList.add('btn-loading');
+        btn.disabled = true;
+    } else {
+        btn.classList.remove('btn-loading');
+        btn.disabled = false;
+        if (btn._origText) btn.textContent = btn._origText;
+    }
+}
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -30,20 +83,27 @@ function handleFacebookCallback() {
     }
 
     if (fbSuccess === 'linked') {
-        alert('Facebook verificado com sucesso! Conta vinculada: ' + (fbName || ''));
+        showToast('Facebook verificado com sucesso! Conta vinculada: ' + (fbName || ''), 'success');
         // Refresh user data
         checkAuth();
         showPage('roommate');
-    } else if (fbSuccess === 'login' && token) {
-        currentToken = token;
-        localStorage.setItem('alugaja_token', token);
-        checkAuth();
+    } else if (fbSuccess === 'login') {
+        // Read token from httpOnly cookie via API endpoint
+        fetch(API + '/auth/fb-token', { credentials: 'include' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.token) {
+                    currentToken = data.token;
+                    localStorage.setItem('alugaja_token', data.token);
+                    checkAuth();
+                }
+            }).catch(function() {});
     } else if (fbError === 'denied') {
-        alert('Verificação do Facebook cancelada.');
+        showToast('Verificação do Facebook cancelada.', 'warning');
     } else if (fbError === 'no_account') {
-        alert('Conta do Facebook encontrada (' + (fbName || '') + '), mas você precisa estar logado no MoraJunto primeiro. Faça login e tente novamente.');
+        showToast('Conta do Facebook encontrada (' + (fbName || '') + '), mas você precisa estar logado primeiro. Faça login e tente novamente.', 'warning');
     } else if (fbError) {
-        alert('Erro na verificação do Facebook. Tente novamente.');
+        showToast('Erro na verificação do Facebook. Tente novamente.', 'error');
     }
 }
 
@@ -109,6 +169,11 @@ function showPage(page, scrollTo) {
     }
 
     closeMobileMenu();
+
+    // Update bottom nav active state
+    document.querySelectorAll('.bottom-nav-item').forEach(function(item) {
+        item.classList.toggle('active', item.getAttribute('data-page') === page);
+    });
 }
 
 // ===== AUTH =====
@@ -156,6 +221,8 @@ function updateNavAuth(loggedIn) {
         // Show chat for all logged-in users
         if (navChat) navChat.classList.remove('hidden');
         if (navChatMobile) navChatMobile.classList.remove('hidden');
+        var bottomChat = document.getElementById('bottomNavChat');
+        if (bottomChat) bottomChat.style.display = '';
 
         navUser.textContent = currentUser.name || 'Minha conta';
         navUser.onclick = null;
@@ -602,7 +669,8 @@ function renderPropertyCards(properties, containerId, withActions) {
 
         return `
         <div class="property-card" onclick="showPropertyDetail('${id}')">
-            <div class="property-img" style="background-image:url('${img}')">
+            <div class="property-img">
+                <img src="${img}" alt="${escapeHtml(p.title || 'Imóvel')}" loading="lazy" decoding="async">
                 <span class="property-badge ${badgeClass}">${badgeText}</span>
                 <span class="property-price">${priceText}</span>
             </div>
@@ -941,7 +1009,7 @@ function contactOwnerViaChat() {
     }
     var ownerId = window._currentPropertyOwner;
     var propertyId = window._currentPropertyId;
-    if (!ownerId) { alert('Erro: proprietário não encontrado'); return; }
+    if (!ownerId) { showToast('Erro: proprietário não encontrado', 'error'); return; }
     if (typeof startConversationFromProperty === 'function') {
         startConversationFromProperty(propertyId, ownerId);
     } else {
@@ -952,7 +1020,7 @@ function contactOwnerViaChat() {
 // ===== VOICE SEARCH =====
 function startVoiceSearch() {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        alert('Seu navegador não suporta busca por voz.');
+        showToast('Seu navegador não suporta busca por voz.', 'warning');
         return;
     }
 
@@ -1009,6 +1077,9 @@ async function loadAgencyDashboard() {
 
         // Load agency leads
         loadAgencyLeads();
+
+        // Load commission stat
+        loadAgentRewardsStat();
     } catch {
         console.error('Failed to load agency dashboard');
     }
@@ -1120,11 +1191,165 @@ function switchAgencyTab(tab) {
     document.querySelectorAll('#page-agency .dash-tab-content').forEach(c => c.classList.remove('active'));
 
     const tabs = document.querySelectorAll('#page-agency .dash-tab');
-    const tabMap = { properties: 0, add: 1, leads: 2 };
+    const tabMap = { properties: 0, add: 1, leads: 2, rewards: 3 };
     if (tabs[tabMap[tab]]) tabs[tabMap[tab]].classList.add('active');
 
     const content = document.getElementById('agTab-' + tab);
     if (content) content.classList.add('active');
+
+    if (tab === 'rewards') loadAgentRewards();
+}
+
+// ===== AGENT REWARDS =====
+async function loadAgentRewardsStat() {
+    try {
+        const res = await fetch(API + '/agent-rewards/dashboard', {
+            headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            var el = document.getElementById('agStatCommission');
+            if (el) el.textContent = 'R$ ' + (data.availableBalance || 0).toFixed(2).replace('.', ',');
+        }
+    } catch {}
+}
+
+async function loadAgentRewards() {
+    try {
+        const res = await fetch(API + '/agent-rewards/dashboard', {
+            headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+
+        // Tier badge
+        const tierColors = {
+            iniciante: '#94a3b8', corretor: '#6366f1', destaque: '#8b5cf6',
+            premium: '#f59e0b', elite: '#10b981'
+        };
+        var badge = document.getElementById('rewardTierBadge');
+        if (badge) {
+            badge.style.background = 'linear-gradient(135deg,' + (tierColors[data.tier] || '#6366f1') + ',' + (tierColors[data.tier] || '#6366f1') + 'dd)';
+            badge.textContent = (data.tierLabel || 'I')[0];
+        }
+        var tn = document.getElementById('rewardTierName');
+        if (tn) tn.textContent = 'Tier: ' + (data.tierLabel || 'Iniciante');
+        var tr = document.getElementById('rewardTierRate');
+        if (tr) tr.textContent = 'Comissao: ' + Math.round((data.commissionRate || 0.10) * 100) + '% da taxa de 8%';
+
+        // Progress
+        if (data.nextTier) {
+            var totalNeeded = (data.nextTier.listingsNeeded || 0) + (data.nextTier.rentalsNeeded || 0);
+            var totalHas = (data.activeListings || 0) + (data.totalRentals || 0);
+            var totalRequired = totalHas + totalNeeded;
+            var pct = totalRequired > 0 ? Math.round((totalHas / totalRequired) * 100) : 0;
+            var pl = document.getElementById('rewardProgressLabel');
+            if (pl) pl.textContent = 'Proximo: ' + data.nextTier.name + ' (' + Math.round(data.nextTier.rate * 100) + '%)';
+            var pp = document.getElementById('rewardProgressPct');
+            if (pp) pp.textContent = pct + '%';
+            var pb = document.getElementById('rewardProgressBar');
+            if (pb) pb.style.width = pct + '%';
+            var pd = document.getElementById('rewardProgressDetail');
+            if (pd) pd.textContent = 'Faltam ' + data.nextTier.listingsNeeded + ' imoveis e ' + data.nextTier.rentalsNeeded + ' alugueis';
+        } else {
+            var pl = document.getElementById('rewardProgressLabel');
+            if (pl) pl.textContent = 'Voce esta no nivel maximo!';
+            var pp = document.getElementById('rewardProgressPct');
+            if (pp) pp.textContent = '100%';
+            var pb = document.getElementById('rewardProgressBar');
+            if (pb) pb.style.width = '100%';
+            var pd = document.getElementById('rewardProgressDetail');
+            if (pd) pd.textContent = '';
+        }
+
+        // Balance
+        var rb = document.getElementById('rewardBalance');
+        if (rb) rb.textContent = 'R$ ' + (data.availableBalance || 0).toFixed(2).replace('.', ',');
+        var rte = document.getElementById('rewardTotalEarned');
+        if (rte) rte.textContent = 'R$ ' + (data.totalEarned || 0).toFixed(2).replace('.', ',');
+        var rtp = document.getElementById('rewardTotalPaidOut');
+        if (rtp) rtp.textContent = 'Sacado: R$ ' + (data.totalPaidOut || 0).toFixed(2).replace('.', ',');
+
+        // Referral code
+        var rc = document.getElementById('rewardReferralCode');
+        if (rc) rc.value = data.referralCode || '...';
+        if (!data.referralCode) {
+            // Generate one
+            try {
+                const rcRes = await fetch(API + '/agent-rewards/referral-code', {
+                    headers: { 'Authorization': 'Bearer ' + currentToken }
+                });
+                if (rcRes.ok) {
+                    const rcData = await rcRes.json();
+                    if (rc) rc.value = rcData.referralCode || '...';
+                }
+            } catch {}
+        }
+
+        // Recent commissions
+        var cl = document.getElementById('rewardCommissionsList');
+        if (cl) {
+            var commissions = data.recentCommissions || [];
+            if (commissions.length === 0) {
+                cl.innerHTML = '<p style="color:var(--text-muted);text-align:center">Nenhuma comissao ainda. Cadastre imoveis e feche alugueis!</p>';
+            } else {
+                cl.innerHTML = commissions.map(function(c) {
+                    var typeLabel = { rental_commission: 'Aluguel', bonus_first_listing: 'Bonus 1o imovel', bonus_fast_rental: 'Bonus rapido', bonus_referral: 'Indicacao', payout: 'Saque' };
+                    var label = typeLabel[c.type] || c.type;
+                    var color = c.amount >= 0 ? '#10b981' : '#ef4444';
+                    var propName = c.property && c.property.title ? c.property.title : '';
+                    var date = c.createdAt ? new Date(c.createdAt).toLocaleDateString('pt-BR') : '';
+                    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid var(--border-color)">' +
+                        '<div><strong style="font-size:0.85rem">' + escapeHtml(label) + '</strong>' +
+                        (propName ? '<br><span style="font-size:0.8rem;color:var(--text-muted)">' + escapeHtml(propName) + '</span>' : '') +
+                        '</div>' +
+                        '<div style="text-align:right"><span style="color:' + color + ';font-weight:700">R$ ' + c.amount.toFixed(2).replace('.', ',') + '</span>' +
+                        '<br><span style="font-size:0.75rem;color:var(--text-muted)">' + date + '</span></div></div>';
+                }).join('');
+            }
+        }
+
+        // Update stat card too
+        var sc = document.getElementById('agStatCommission');
+        if (sc) sc.textContent = 'R$ ' + (data.availableBalance || 0).toFixed(2).replace('.', ',');
+    } catch {
+        console.error('Failed to load agent rewards');
+    }
+}
+
+async function requestPayout() {
+    var pixKey = prompt('Digite sua chave PIX (CPF, email, telefone ou chave aleatoria):');
+    if (!pixKey || !pixKey.trim()) return;
+
+    try {
+        const res = await fetch(API + '/agent-rewards/payout', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pixKey: pixKey.trim() })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.message || 'Saque solicitado!');
+            loadAgentRewards();
+        } else {
+            alert(data.error || 'Erro ao solicitar saque');
+        }
+    } catch {
+        alert('Erro de conexao');
+    }
+}
+
+function copyReferralCode() {
+    var input = document.getElementById('rewardReferralCode');
+    if (input && input.value && input.value !== '...') {
+        navigator.clipboard.writeText(input.value).then(function() {
+            alert('Codigo copiado: ' + input.value);
+        }).catch(function() {
+            input.select();
+            document.execCommand('copy');
+            alert('Codigo copiado!');
+        });
+    }
 }
 
 // ===== ADD / EDIT PROPERTY =====
@@ -1216,7 +1441,7 @@ async function editProperty(id) {
         document.getElementById('addPropertyTitle').textContent = 'Editar imóvel';
         switchAgencyTab('add');
     } catch {
-        alert('Erro ao carregar dados do imóvel.');
+        showToast('Erro ao carregar dados do imóvel.', 'error');
     }
 }
 
@@ -1232,10 +1457,10 @@ async function deleteProperty(id) {
         if (res.ok) {
             loadAgencyProperties();
         } else {
-            alert('Erro ao excluir imóvel.');
+            showToast('Erro ao excluir imóvel.', 'error');
         }
     } catch {
-        alert('Erro de conexão.');
+        showToast('Erro de conexão.', 'error');
     }
 }
 
@@ -1367,13 +1592,13 @@ async function adminDeleteProperty(id) {
         loadAdminProperties();
         loadAdminPanel();
     } catch {
-        alert('Erro ao excluir.');
+        showToast('Erro ao excluir.', 'error');
     }
 }
 
 async function toggleAgencyStatus(id) {
     // Placeholder for toggling agency active/inactive
-    alert('Funcionalidade em desenvolvimento.');
+    showToast('Funcionalidade em desenvolvimento.', 'info');
 }
 
 function switchAdminTab(tab) {
@@ -1404,6 +1629,15 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+function safeImageUrl(url) {
+    if (!url || typeof url !== 'string') return '';
+    try {
+        var parsed = new URL(url, window.location.origin);
+        if (['http:', 'https:', 'data:'].includes(parsed.protocol)) return url;
+    } catch(e) {}
+    return '';
 }
 
 // ===== FORM FEEDBACK HELPERS =====
@@ -1655,7 +1889,7 @@ function calculateBudget() {
     var groupSize = parseInt(document.getElementById('budgetGroupSize').value) || 2;
     var bedrooms = parseInt(document.getElementById('budgetBedrooms').value) || 2;
     var neighborhoodKey = document.getElementById('budgetNeighborhood').value;
-    if (salary <= 0) { alert('Digite sua renda mensal'); return; }
+    if (salary <= 0) { showToast('Digite sua renda mensal', 'warning'); return; }
 
     // Pegar aluguel médio real do bairro ou da cidade
     var avgRent;
@@ -1800,7 +2034,7 @@ function previewVerifyFile(input, previewId) {
 async function submitVerification() {
     var selfie = document.getElementById('verifySelfie').files[0];
     var doc = document.getElementById('verifyDocument').files[0];
-    if (!selfie || !doc) { alert('Envie a selfie e o documento'); return; }
+    if (!selfie || !doc) { showToast('Envie a selfie e o documento', 'warning'); return; }
 
     var formData = new FormData();
     formData.append('selfie', selfie);
@@ -1818,13 +2052,13 @@ async function submitVerification() {
         });
         var data = await res.json();
         if (res.ok) {
-            alert(data.message || 'Documentos enviados!');
+            showToast(data.message || 'Documentos enviados!', 'success');
             updateVerificationStatus('pending');
         } else {
-            alert(data.error || 'Erro ao enviar');
+            showToast(data.error || 'Erro ao enviar', 'error');
         }
     } catch(e) {
-        alert('Erro de conexao');
+        showToast('Erro de conexão', 'error');
     }
     btn.disabled = false;
     btn.textContent = 'Enviar para analise';

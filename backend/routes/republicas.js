@@ -30,13 +30,15 @@ router.get('/', async (req, res) => {
         if (maxPrice) query.splitPrice = { $lte: Number(maxPrice) };
         if (spotsAvailable) query.availableSpots = { $gte: Number(spotsAvailable) };
 
-        const skip = (Number(page) - 1) * Number(limit);
+        var safePage = Math.max(1, Math.min(Number(page) || 1, 1000));
+        var safeLimit = Math.max(1, Math.min(Number(limit) || 20, 100));
+        const skip = (safePage - 1) * safeLimit;
         const total = await Republica.countDocuments(query);
         const republicas = await Republica.find(query)
             .populate('owner', 'name')
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(Number(limit));
+            .limit(safeLimit);
 
         res.json({
             republicas,
@@ -71,27 +73,45 @@ router.post('/', authMiddleware, async (req, res) => {
             photos, features, rules, genderPolicy, university, availableSpots
         } = req.body;
 
-        if (!name) return res.status(400).json({ error: 'Nome da república é obrigatório' });
+        if (!name || typeof name !== 'string') return res.status(400).json({ error: 'Nome da república é obrigatório' });
+        if (name.length > 100) return res.status(400).json({ error: 'Nome muito longo (máx 100 caracteres)' });
+
+        // Validate numeric fields
+        var safePrice = Math.max(0, Math.min(Number(price) || 0, 100000));
+        var safeSplitPrice = Math.max(0, Math.min(Number(splitPrice) || 0, 100000));
+        var safeMaxMembers = Math.max(1, Math.min(Number(maxMembers) || 4, 50));
+        var safeAvailableSpots = Math.max(0, Math.min(Number(availableSpots) || 1, 50));
+        var safeLat = latitude ? Math.max(-90, Math.min(Number(latitude), 90)) : undefined;
+        var safeLng = longitude ? Math.max(-180, Math.min(Number(longitude), 180)) : undefined;
+
+        // Validate arrays
+        var safePhotos = Array.isArray(photos) ? photos.filter(function(p) { return typeof p === 'string'; }).slice(0, 20).map(function(p) { return p.substring(0, 500); }) : [];
+        var safeFeatures = Array.isArray(features) ? features.filter(function(f) { return typeof f === 'string'; }).slice(0, 20).map(function(f) { return f.substring(0, 100); }) : [];
+        var safeRules = Array.isArray(rules) ? rules.filter(function(r) { return typeof r === 'string'; }).slice(0, 20).map(function(r) { return r.substring(0, 200); }) : [];
+
+        // Validate genderPolicy enum
+        var validGenderPolicies = ['feminina', 'masculina', 'mista'];
+        var safeGenderPolicy = validGenderPolicies.includes(genderPolicy) ? genderPolicy : 'mista';
 
         const republica = await Republica.create({
-            name,
-            description: description || '',
+            name: name.substring(0, 100),
+            description: (description || '').substring(0, 2000),
             owner: req.user.userId,
             members: [req.user.userId],
-            maxMembers: maxMembers || 4,
-            price: price || 0,
-            splitPrice: splitPrice || 0,
-            address: address || '',
-            neighborhood: neighborhood || '',
-            city: city || 'Ribeirão Preto',
-            latitude,
-            longitude,
-            photos: photos || [],
-            features: features || [],
-            rules: rules || [],
-            genderPolicy: genderPolicy || 'mista',
-            university: university || '',
-            availableSpots: availableSpots || 1,
+            maxMembers: safeMaxMembers,
+            price: safePrice,
+            splitPrice: safeSplitPrice,
+            address: (address || '').substring(0, 300),
+            neighborhood: (neighborhood || '').substring(0, 100),
+            city: (city || 'Ribeirão Preto').substring(0, 100),
+            latitude: safeLat,
+            longitude: safeLng,
+            photos: safePhotos,
+            features: safeFeatures,
+            rules: safeRules,
+            genderPolicy: safeGenderPolicy,
+            university: (university || '').substring(0, 100),
+            availableSpots: safeAvailableSpots,
             status: 'active'
         });
 

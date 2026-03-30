@@ -89,7 +89,8 @@ router.get('/', async (req, res) => {
         else if (sort === 'newest' || sort === 'recent') sortOption = { createdAt: -1 };
 
         var limit = 20;
-        var skip = page ? (parseInt(page) - 1) * limit : 0;
+        var safePage = Math.max(1, Math.min(parseInt(page) || 1, 1000));
+        var skip = (safePage - 1) * limit;
 
         var total = await Property.countDocuments(query);
         var properties = await Property.find(query)

@@ -89,7 +89,12 @@ function containsContactInfo(rawText) {
 router.post('/conversations', async (req, res) => {
     try {
         var { recipientId, propertyId } = req.body;
-        if (!recipientId) return res.status(400).json({ error: 'Destinatário obrigatório' });
+        if (!recipientId || typeof recipientId !== 'string' || !/^[a-f\d]{24}$/i.test(recipientId)) {
+            return res.status(400).json({ error: 'Destinatário inválido' });
+        }
+        if (propertyId && (typeof propertyId !== 'string' || !/^[a-f\d]{24}$/i.test(propertyId))) {
+            return res.status(400).json({ error: 'ID do imóvel inválido' });
+        }
 
         // Match-only chat: require mutual match OR property context
         if (!propertyId) {

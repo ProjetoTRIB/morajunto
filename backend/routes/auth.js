@@ -68,13 +68,19 @@ function formatCPF(cpf) {
 // POST /api/auth/register — cria conta (user ou agency)
 router.post('/register', async (req, res) => {
     try {
-        var { name, email, password, role, phone, cpf, birthDate, gender, profilePhoto } = req.body;
+        var { name, email, password, role, phone, cpf, birthDate, gender, profilePhoto, referralCode } = req.body;
 
         if (!name || !email || !password || typeof name !== 'string' || typeof email !== 'string' || typeof password !== 'string') {
             return res.status(400).json({ error: 'Nome, email e senha são obrigatórios' });
         }
+        if (name.length > 100) {
+            return res.status(400).json({ error: 'Nome muito longo (máximo 100 caracteres)' });
+        }
         if (!isValidEmail(email)) {
             return res.status(400).json({ error: 'Email inválido' });
+        }
+        if (password.length > 1000) {
+            return res.status(400).json({ error: 'Senha muito longa (máximo 1000 caracteres)' });
         }
         if (!isStrongPassword(password)) {
             return res.status(400).json({ error: 'Senha deve ter pelo menos 8 caracteres, 1 letra maiúscula, 1 minúscula, 1 número e 1 caractere especial' });
@@ -131,6 +137,16 @@ router.post('/register', async (req, res) => {
             emailVerified: true
         });
 
+        // Handle referral code for agency users
+        if (referralCode && role === 'agency') {
+            try {
+                var referrer = await User.findOne({ 'agentProfile.referralCode': referralCode.toUpperCase().trim(), role: 'agency' });
+                if (referrer) {
+                    await User.findByIdAndUpdate(user._id, { 'agentProfile.referredBy': referrer._id });
+                }
+            } catch (e) { console.error('Referral error:', e.message); }
+        }
+
         var token = generateToken(user);
         res.status(201).json({
             token,
@@ -149,6 +165,9 @@ router.post('/login', async (req, res) => {
 
         if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
             return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+        }
+        if (password.length > 1000) {
+            return res.status(400).json({ error: 'Senha muito longa' });
         }
 
         var user = await User.findOne({ email: email.toLowerCase().trim() });
@@ -225,9 +244,18 @@ router.get('/me', authMiddleware, async (req, res) => {
     }
 });
 
-// POST /api/auth/admin/seed — cria admin (apenas se nenhum admin existe)
+// POST /api/auth/admin/seed — cria admin (apenas se nenhum admin existe, requer ADMIN_SEED_KEY)
 router.post('/admin/seed', async (req, res) => {
     try {
+        // Require seed key in production
+        var seedKey = process.env.ADMIN_SEED_KEY;
+        if (seedKey && req.body.seedKey !== seedKey) {
+            return res.status(401).json({ error: 'Chave de seed inválida' });
+        }
+        if (process.env.NODE_ENV === 'production' && !seedKey) {
+            return res.status(403).json({ error: 'Seed desabilitado em produção. Configure ADMIN_SEED_KEY.' });
+        }
+
         // Block if any admin already exists
         var existingAdmin = await User.findOne({ role: 'admin' });
         if (existingAdmin) {
@@ -277,6 +305,11 @@ router.post('/verify-instagram', authMiddleware, async function(req, res) {
 
 // ===== FACEBOOK OAUTH =====
 var https = require('https');
+var crypto = require('crypto');
+
+// In-memory store for OAuth state tokens (use Redis in production for multi-instance)
+var oauthStates = new Map();
+var OAUTH_STATE_TTL = 10 * 60 * 1000; // 10 minutes
 
 function httpsGet(url) {
     return new Promise(function(resolve, reject) {
@@ -290,6 +323,28 @@ function httpsGet(url) {
     });
 }
 
+// POST request for token exchange (avoids sending client_secret in URL)
+function httpsPost(hostname, path, body) {
+    return new Promise(function(resolve, reject) {
+        var bodyStr = typeof body === 'string' ? body : JSON.stringify(body);
+        var req = https.request({
+            hostname: hostname,
+            path: path,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(bodyStr) }
+        }, function(res) {
+            var data = '';
+            res.on('data', function(chunk) { data += chunk; });
+            res.on('end', function() {
+                try { resolve(JSON.parse(data)); } catch(e) { reject(e); }
+            });
+        });
+        req.on('error', reject);
+        req.write(bodyStr);
+        req.end();
+    });
+}
+
 // GET /api/auth/facebook — redirect to Facebook login
 router.get('/facebook', function(req, res) {
     var appId = process.env.FACEBOOK_APP_ID;
@@ -298,13 +353,21 @@ router.get('/facebook', function(req, res) {
         return res.status(503).json({ error: 'Facebook OAuth não configurado. Configure FACEBOOK_APP_ID no .env' });
     }
 
-    // Save the user's token in state so we can link accounts
-    var state = req.query.token || '';
+    // Generate secure random state token (CSRF protection)
+    var stateToken = crypto.randomBytes(32).toString('hex');
+    var userJwt = req.query.token || '';
+    oauthStates.set(stateToken, { userJwt: userJwt, createdAt: Date.now() });
+
+    // Cleanup expired states
+    for (var [key, val] of oauthStates) {
+        if (Date.now() - val.createdAt > OAUTH_STATE_TTL) oauthStates.delete(key);
+    }
+
     var scope = 'public_profile,email';
     var url = 'https://www.facebook.com/v19.0/dialog/oauth?client_id=' + appId +
         '&redirect_uri=' + encodeURIComponent(callback) +
         '&scope=' + scope +
-        '&state=' + encodeURIComponent(state) +
+        '&state=' + encodeURIComponent(stateToken) +
         '&response_type=code';
     res.redirect(url);
 });
@@ -312,24 +375,33 @@ router.get('/facebook', function(req, res) {
 // GET /api/auth/facebook/callback — handle Facebook redirect
 router.get('/facebook/callback', async function(req, res) {
     var code = req.query.code;
-    var state = req.query.state || '';
+    var stateToken = req.query.state || '';
     var error = req.query.error;
 
     if (error || !code) {
         return res.redirect('/?fb_error=denied');
     }
 
+    // Validate state token (CSRF protection)
+    var stateData = oauthStates.get(stateToken);
+    if (!stateData || Date.now() - stateData.createdAt > OAUTH_STATE_TTL) {
+        oauthStates.delete(stateToken);
+        return res.redirect('/?fb_error=invalid_state');
+    }
+    oauthStates.delete(stateToken); // one-time use
+    var userJwt = stateData.userJwt;
+
     var appId = process.env.FACEBOOK_APP_ID;
     var appSecret = process.env.FACEBOOK_APP_SECRET;
     var callback = process.env.FACEBOOK_CALLBACK_URL;
 
     try {
-        // Exchange code for access token
-        var tokenUrl = 'https://graph.facebook.com/v19.0/oauth/access_token?client_id=' + appId +
+        // Exchange code for access token via POST (secure — no secret in URL)
+        var tokenBody = 'client_id=' + appId +
             '&redirect_uri=' + encodeURIComponent(callback) +
             '&client_secret=' + appSecret +
             '&code=' + code;
-        var tokenData = await httpsGet(tokenUrl);
+        var tokenData = await httpsPost('graph.facebook.com', '/v19.0/oauth/access_token', tokenBody);
 
         if (!tokenData.access_token) {
             return res.redirect('/?fb_error=token_failed');
@@ -343,10 +415,10 @@ router.get('/facebook/callback', async function(req, res) {
             return res.redirect('/?fb_error=profile_failed');
         }
 
-        // Link to existing MoraJunto user (via state token)
-        if (state) {
+        // Link to existing MoraJunto user (via saved JWT)
+        if (userJwt) {
             try {
-                var decoded = jwt.verify(state, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+                var decoded = jwt.verify(userJwt, process.env.JWT_SECRET, { algorithms: ['HS256'] });
                 var user = await User.findById(decoded.userId);
                 if (user) {
                     user.facebookId = fbUser.id;
@@ -366,9 +438,15 @@ router.get('/facebook/callback', async function(req, res) {
         // Check if Facebook account already linked to a user
         var existingFb = await User.findOne({ facebookId: fbUser.id });
         if (existingFb) {
-            // Login with existing account
+            // Login — set token as httpOnly cookie instead of URL parameter
             var token = generateToken(existingFb);
-            return res.redirect('/?fb_success=login&token=' + token + '&fb_name=' + encodeURIComponent(existingFb.name));
+            res.cookie('fb_auth_token', token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 60000 // 1 minute — frontend should read and clear
+            });
+            return res.redirect('/?fb_success=login&fb_name=' + encodeURIComponent(existingFb.name));
         }
 
         // No linked account and no state token — redirect to register
@@ -378,6 +456,15 @@ router.get('/facebook/callback', async function(req, res) {
         console.error('Facebook OAuth error:', e.message);
         return res.redirect('/?fb_error=server');
     }
+});
+
+// GET /api/auth/fb-token — exchange httpOnly cookie for token (one-time use)
+router.get('/fb-token', function(req, res) {
+    var token = req.cookies && req.cookies.fb_auth_token;
+    if (!token) return res.status(401).json({ error: 'No token' });
+    // Clear the cookie immediately (one-time use)
+    res.clearCookie('fb_auth_token');
+    res.json({ token: token });
 });
 
 module.exports = router;

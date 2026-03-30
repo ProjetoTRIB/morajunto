@@ -34,7 +34,7 @@ function renderRepublicas(reps) {
         return;
     }
     grid.innerHTML = reps.map(function(r) {
-        var photo = (r.photos && r.photos[0]) ? r.photos[0] : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&h=400&fit=crop';
+        var photo = safeImageUrl((r.photos && r.photos[0]) ? r.photos[0] : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&h=400&fit=crop');
         var genderLabel = r.genderPolicy === 'feminina' ? 'Feminina' : r.genderPolicy === 'masculina' ? 'Masculina' : 'Mista';
         var spotsClass = r.availableSpots > 0 ? 'available' : 'full';
         var spotsText = r.availableSpots > 0 ? r.availableSpots + ' vaga' + (r.availableSpots > 1 ? 's' : '') : 'Lotada';
@@ -43,7 +43,8 @@ function renderRepublicas(reps) {
 
         var safeId = escapeHtml(r._id || r.id || '');
         return '<div class="rep-card" onclick="showRepublicaDetail(\'' + safeId + '\')">' +
-            '<div class="rep-card-img" style="background-image:url(\'' + photo + '\')">' +
+            '<div class="rep-card-img">' +
+                '<img src="' + escapeHtml(photo) + '" alt="' + escapeHtml(r.name) + '" loading="lazy" decoding="async">' +
                 '<div class="rep-card-badges">' +
                     '<span class="rep-badge rep-badge-gender">' + genderLabel + '</span>' +
                     (r.university ? '<span class="rep-badge rep-badge-uni">' + escapeHtml(r.university) + '</span>' : '') +
@@ -123,7 +124,7 @@ async function showRepublicaDetail(id) {
             return;
         }
 
-        var photo = (r.photos && r.photos[0]) ? r.photos[0] : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&h=400&fit=crop';
+        var photo = safeImageUrl((r.photos && r.photos[0]) ? r.photos[0] : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&h=400&fit=crop');
         var genderLabel = r.genderPolicy === 'feminina' ? 'Feminina' : r.genderPolicy === 'masculina' ? 'Masculina' : 'Mista';
         var membersHtml = (r.members || []).map(function(m) {
             return '<div class="rep-detail-member"><strong>' + escapeHtml(m.name || 'Membro') + '</strong></div>';
@@ -134,7 +135,7 @@ async function showRepublicaDetail(id) {
         var split = r.members && r.members.length > 0 ? Math.round(r.price / r.members.length) : r.price;
 
         var html = '<div class="custom-modal-body">' +
-            '<div class="rep-card-img" style="background-image:url(\'' + escapeHtml(photo) + '\');height:200px;border-radius:12px;margin-bottom:16px"></div>' +
+            '<div class="rep-card-img" style="height:200px;border-radius:12px;margin-bottom:16px;overflow:hidden"><img src="' + escapeHtml(photo) + '" alt="' + escapeHtml(r.name) + '" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover"></div>' +
             '<h2>' + escapeHtml(r.name) + '</h2>' +
             '<p>' + escapeHtml(r.description || '') + '</p>' +
             '<div style="margin:12px 0"><strong>' + genderLabel + '</strong>' +

@@ -38,7 +38,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=5000">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css?v=5003">
 
     <!-- JSON-LD Structured Data for SEO -->
     <script type="application/ld+json">
@@ -950,6 +951,15 @@
                             <span class="dash-stat-label">Visualizações</span>
                         </div>
                     </div>
+                    <div class="dash-stat-card">
+                        <div class="dash-stat-icon" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                        </div>
+                        <div>
+                            <span class="dash-stat-val" id="agStatCommission">R$ 0</span>
+                            <span class="dash-stat-label">Comissoes disponiveis</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Tabs -->
@@ -957,6 +967,7 @@
                     <button class="dash-tab active" onclick="switchAgencyTab('properties')">Meus Imóveis</button>
                     <button class="dash-tab" onclick="switchAgencyTab('add')">Adicionar Imóvel</button>
                     <button class="dash-tab" onclick="switchAgencyTab('leads')">Leads</button>
+                    <button class="dash-tab" onclick="switchAgencyTab('rewards')">Comissoes</button>
                 </div>
 
                 <!-- Tab: My Properties -->
@@ -1087,6 +1098,86 @@
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                         <h3>Nenhum lead recebido</h3>
                         <p>Quando alguém demonstrar interesse nos seus imóveis, aparecerá aqui.</p>
+                    </div>
+                </div>
+
+                <!-- Tab: Comissoes / Rewards -->
+                <div class="dash-tab-content" id="agTab-rewards">
+                    <!-- Tier Card -->
+                    <div class="form-card" style="margin-bottom:1.5rem">
+                        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem">
+                            <div id="rewardTierBadge" style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem">--</div>
+                            <div>
+                                <h3 style="margin:0" id="rewardTierName">Carregando...</h3>
+                                <p style="margin:0;color:var(--text-muted);font-size:0.9rem" id="rewardTierRate">Comissao: --% da taxa</p>
+                            </div>
+                        </div>
+                        <div id="rewardTierProgress" style="margin-top:1rem">
+                            <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text-muted);margin-bottom:0.3rem">
+                                <span id="rewardProgressLabel">Proximo tier: --</span>
+                                <span id="rewardProgressPct">0%</span>
+                            </div>
+                            <div style="background:var(--bg-secondary);border-radius:8px;height:8px;overflow:hidden">
+                                <div id="rewardProgressBar" style="height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:8px;width:0%;transition:width 0.5s"></div>
+                            </div>
+                            <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.3rem" id="rewardProgressDetail"></p>
+                        </div>
+                    </div>
+
+                    <!-- Balance + Payout -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem">
+                        <div class="form-card">
+                            <p style="color:var(--text-muted);font-size:0.85rem;margin:0">Saldo disponivel</p>
+                            <h2 style="margin:0.3rem 0;color:#10b981" id="rewardBalance">R$ 0,00</h2>
+                            <button class="btn btn-accent" style="margin-top:0.5rem;width:100%" onclick="requestPayout()">Solicitar Saque</button>
+                        </div>
+                        <div class="form-card">
+                            <p style="color:var(--text-muted);font-size:0.85rem;margin:0">Total ganho</p>
+                            <h2 style="margin:0.3rem 0" id="rewardTotalEarned">R$ 0,00</h2>
+                            <p style="color:var(--text-muted);font-size:0.8rem;margin:0" id="rewardTotalPaidOut">Sacado: R$ 0,00</p>
+                        </div>
+                    </div>
+
+                    <!-- Referral Code -->
+                    <div class="form-card" style="margin-bottom:1.5rem">
+                        <h4 style="margin:0 0 0.5rem">Indique corretores e ganhe R$100</h4>
+                        <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 0.8rem">Quando um corretor indicado por voce cadastrar o primeiro imovel, voce ganha R$100 de bonus.</p>
+                        <div style="display:flex;gap:0.5rem;align-items:center">
+                            <input type="text" id="rewardReferralCode" readonly style="font-weight:700;font-size:1.1rem;letter-spacing:2px;text-align:center;flex:1" value="...">
+                            <button class="btn btn-outline" onclick="copyReferralCode()">Copiar</button>
+                        </div>
+                    </div>
+
+                    <!-- Tier Table -->
+                    <div class="form-card" style="margin-bottom:1.5rem">
+                        <h4 style="margin:0 0 0.8rem">Niveis de Comissao</h4>
+                        <div style="overflow-x:auto">
+                            <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+                                <thead>
+                                    <tr style="border-bottom:1px solid var(--border-color)">
+                                        <th style="text-align:left;padding:0.5rem">Tier</th>
+                                        <th style="text-align:center;padding:0.5rem">Imoveis</th>
+                                        <th style="text-align:center;padding:0.5rem">Alugueis</th>
+                                        <th style="text-align:center;padding:0.5rem">Comissao</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td style="padding:0.5rem">Iniciante</td><td style="text-align:center">0+</td><td style="text-align:center">0</td><td style="text-align:center;color:#6366f1;font-weight:600">10%</td></tr>
+                                    <tr><td style="padding:0.5rem">Corretor</td><td style="text-align:center">3+</td><td style="text-align:center">1+</td><td style="text-align:center;color:#6366f1;font-weight:600">20%</td></tr>
+                                    <tr><td style="padding:0.5rem">Destaque</td><td style="text-align:center">8+</td><td style="text-align:center">3+</td><td style="text-align:center;color:#6366f1;font-weight:600">30%</td></tr>
+                                    <tr><td style="padding:0.5rem">Premium</td><td style="text-align:center">15+</td><td style="text-align:center">8+</td><td style="text-align:center;color:#6366f1;font-weight:600">35%</td></tr>
+                                    <tr style="background:var(--bg-secondary)"><td style="padding:0.5rem;font-weight:700">Elite</td><td style="text-align:center">25+</td><td style="text-align:center">15+</td><td style="text-align:center;color:#10b981;font-weight:700">40%</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Recent Commissions -->
+                    <div class="form-card">
+                        <h4 style="margin:0 0 0.8rem">Comissoes Recentes</h4>
+                        <div id="rewardCommissionsList">
+                            <p style="color:var(--text-muted);text-align:center">Carregando...</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3703,10 +3794,51 @@
         </div>
     </div>
 
-    <script src="script.js?v=5000"></script>
-    <script src="roommate.js?v=5000"></script>
-    <script src="republicas.js?v=5000"></script>
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Bottom Navigation Mobile -->
+    <nav class="bottom-nav" id="bottomNav">
+        <button class="bottom-nav-item active" onclick="showPage('home')" data-page="home">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+            <span>Início</span>
+        </button>
+        <button class="bottom-nav-item" onclick="showPage('search')" data-page="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span>Buscar</span>
+        </button>
+        <button class="bottom-nav-item" onclick="showPage('roommate')" data-page="roommate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            <span>Dividir</span>
+        </button>
+        <button class="bottom-nav-item" onclick="showPage('chat')" data-page="chat" id="bottomNavChat" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            <span>Chat</span>
+            <span class="bottom-nav-badge" id="bottomNavBadge"></span>
+        </button>
+        <button class="bottom-nav-item" onclick="showPage('republicas')" data-page="republicas">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7"/><rect x="4" y="9" width="16" height="13" rx="1"/><path d="M9 22V12h6v10"/></svg>
+            <span>Repúblicas</span>
+        </button>
+    </nav>
+
+    <script src="script.js?v=5003"></script>
+    <script src="roommate.js?v=5003"></script>
+    <script src="republicas.js?v=5003"></script>
     <script>
+    // Service Worker — force update and clear old caches
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+            regs.forEach(function(reg) { reg.update(); });
+        });
+        caches.keys().then(function(keys) {
+            keys.forEach(function(k) {
+                if (k !== 'morajunto-v3') caches.delete(k);
+            });
+        });
+        navigator.serviceWorker.register('/sw.js').catch(function(){});
+    }
+
     // Scroll reveal animations
     (function(){
         var observer = new IntersectionObserver(function(entries){

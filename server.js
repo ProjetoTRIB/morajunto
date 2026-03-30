@@ -8,12 +8,14 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 // mongoSanitize removed — incompatible with Express 5, using manual sanitization
 const hpp = require('hpp');
+const cookieParser = require('cookie-parser');
 const http = require('http');
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const connectDB = require('./backend/config/db');
 
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 const ALLOWED_ORIGINS = process.env.CORS_ORIGINS
@@ -65,20 +67,24 @@ app.set('onlineUsers', onlineUsers);
 // ===== SECURITY MIDDLEWARE =====
 
 // Helmet — HTTP security headers (XSS, clickjacking, HSTS, etc.)
+var cspDirectives = {
+    defaultSrc: ["'self'"],
+    scriptSrc: ["'self'", "'unsafe-inline'"],
+    scriptSrcAttr: ["'unsafe-inline'"],
+    styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+    fontSrc: ["'self'", "https://fonts.gstatic.com"],
+    imgSrc: ["'self'", "data:", "https:"],
+    connectSrc: ["'self'", "https://api.groq.com", "https://api.mercadopago.com", "https://graph.facebook.com", "wss:", "ws:"],
+    frameSrc: ["'self'", "https://www.openstreetmap.org", "https://www.facebook.com"],
+};
+if (process.env.NODE_ENV !== 'production') {
+    cspDirectives.upgradeInsecureRequests = null;
+    cspDirectives.imgSrc = ["'self'", "data:", "https:", "http:"];
+}
 app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"],
-            scriptSrcAttr: ["'unsafe-inline'"],
-            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-            fontSrc: ["'self'", "https://fonts.gstatic.com"],
-            imgSrc: ["'self'", "data:", "https://images.unsplash.com", "https://*.mercadopago.com", "https://*.fbcdn.net", "https://platform-lookaside.fbsbx.com"],
-            connectSrc: ["'self'", "https://api.groq.com", "https://api.mercadopago.com", "https://graph.facebook.com", "wss:", "ws:"],
-            frameSrc: ["'self'", "https://www.openstreetmap.org", "https://www.facebook.com"],
-        }
-    },
-    crossOriginEmbedderPolicy: false
+    contentSecurityPolicy: { directives: cspDirectives },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
 
 // CORS
@@ -86,6 +92,9 @@ app.use(cors({
     origin: ALLOWED_ORIGINS,
     credentials: true
 }));
+
+// Cookie parser (for OAuth token cookies)
+app.use(cookieParser());
 
 // Body parser with size limit (prevent large payload attacks)
 app.use(express.json({ limit: '10kb' }));
@@ -101,12 +110,14 @@ app.use((req, res, next) => {
     next();
 });
 
-// Manual NoSQL injection prevention (sanitize $operators from body, query, params)
+// Manual NoSQL injection + prototype pollution prevention
 app.use(function(req, res, next) {
+    var BLOCKED_KEYS = ['__proto__', 'constructor', 'prototype'];
     function sanitize(obj) {
         if (!obj || typeof obj !== 'object') return obj;
         if (Array.isArray(obj)) { obj.forEach(sanitize); return obj; }
         for (var key in obj) {
+            if (BLOCKED_KEYS.includes(key)) { delete obj[key]; continue; }
             if (key.startsWith('$')) { delete obj[key]; continue; }
             if (typeof obj[key] === 'string' && obj[key].startsWith('$')) {
                 delete obj[key]; continue;
@@ -121,7 +132,7 @@ app.use(function(req, res, next) {
     next();
 });
 
-// XSS sanitization — strip HTML tags from string inputs
+// XSS sanitization — strip HTML tags from string inputs (body, query, params)
 app.use(function(req, res, next) {
     function stripTags(obj) {
         if (!obj || typeof obj !== 'object') return;
@@ -134,11 +145,23 @@ app.use(function(req, res, next) {
         }
     }
     if (req.body) stripTags(req.body);
+    if (req.query) stripTags(req.query);
+    if (req.params) stripTags(req.params);
     next();
 });
 
 // HPP — prevent HTTP parameter pollution
 app.use(hpp());
+
+// HTTPS enforcement in production (before static files and routes)
+if (process.env.NODE_ENV === 'production') {
+    app.use((req, res, next) => {
+        if (req.headers['x-forwarded-proto'] !== 'https') {
+            return res.redirect('https://' + req.hostname + req.url);
+        }
+        next();
+    });
+}
 
 // Rate limiter — general (100 requests per minute per IP)
 var generalLimiter = rateLimit({
@@ -185,6 +208,10 @@ var chatLimiter = rateLimit({
 });
 app.use('/api/chat', chatLimiter);
 
+// Serve PWA files before blocking middleware
+app.get('/sw.js', (req, res) => res.sendFile(path.join(__dirname, 'sw.js')));
+app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'manifest.json')));
+
 // Block sensitive files and backend source code
 app.use(function(req, res, next) {
     var blocked = ['.env', '.git', 'package.json', 'package-lock.json', 'node_modules', 'backend', 'server.js'];
@@ -221,15 +248,6 @@ app.use(express.static(path.join(__dirname), {
     }
 }));
 
-// HTTPS enforcement in production (BEFORE routes)
-if (process.env.NODE_ENV === 'production') {
-    app.use((req, res, next) => {
-        if (req.headers['x-forwarded-proto'] !== 'https') {
-            return res.redirect('https://' + req.hostname + req.url);
-        }
-        next();
-    });
-}
 
 // Ensure upload directories exist
 var fs = require('fs');
@@ -249,6 +267,7 @@ app.use('/api/payments', require('./backend/routes/payments'));
 app.use('/api/chat', require('./backend/routes/chat'));
 app.use('/api/reports', require('./backend/routes/reports'));
 app.use('/api/verification', require('./backend/routes/verification'));
+app.use('/api/agent-rewards', require('./backend/routes/agentRewards'));
 
 // Public stats (homepage)
 app.get('/api/stats', async (req, res) => {

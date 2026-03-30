@@ -20,6 +20,10 @@ const paymentTransactionSchema = new mongoose.Schema({
     status: { type: String, enum: ['pending', 'paid', 'failed', 'refunded'], default: 'pending' },
     confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     paidAt: { type: Date },
+    // Commission tracking
+    agentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    agentCommission: { type: Number, default: 0 },
+    platformNet: { type: Number },
     createdAt: { type: Date, default: Date.now }
 });
 

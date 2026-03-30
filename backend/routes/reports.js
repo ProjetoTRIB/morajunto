@@ -11,8 +11,11 @@ router.post('/', authMiddleware, async (req, res) => {
     try {
         var { reportedUserId, conversationId, reason, description } = req.body;
 
-        if (!reportedUserId || !reason) {
+        if (!reportedUserId || !reason || typeof reportedUserId !== 'string' || !/^[a-f\d]{24}$/i.test(reportedUserId)) {
             return res.status(400).json({ error: 'Usuario e motivo sao obrigatorios' });
+        }
+        if (conversationId && (typeof conversationId !== 'string' || !/^[a-f\d]{24}$/i.test(conversationId))) {
+            return res.status(400).json({ error: 'ID da conversa inválido' });
         }
 
         if (reportedUserId === req.user.userId) {

@@ -62,6 +62,20 @@ var userSchema = new mongoose.Schema({
         ageMax: { type: Number, default: 40 }
     },
 
+    // Agent/Agency rewards profile
+    agentProfile: {
+        tier: { type: String, enum: ['iniciante', 'corretor', 'destaque', 'premium', 'elite'], default: 'iniciante' },
+        totalEarned: { type: Number, default: 0 },
+        availableBalance: { type: Number, default: 0 },
+        totalPaidOut: { type: Number, default: 0 },
+        activeListings: { type: Number, default: 0 },
+        totalRentals: { type: Number, default: 0 },
+        referralCode: { type: String, unique: true, sparse: true },
+        referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        firstListingBonusPaid: { type: Boolean, default: false },
+        pixKey: { type: String, default: '' }
+    },
+
     matches: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     likedProfiles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     dislikedProfiles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

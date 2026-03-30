@@ -1,0 +1,20 @@
+{
+  "name": "MoraJunto — Moradia Compartilhada",
+  "short_name": "MoraJunto",
+  "description": "Encontre o colega ideal para dividir aluguel em Ribeirão Preto",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#4338CA",
+  "background_color": "#FAFAFA",
+  "lang": "pt-BR",
+  "categories": ["lifestyle", "social"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

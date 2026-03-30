@@ -595,7 +595,7 @@ function createGroupWithMember(name, matchId) {
     rmGroups.push(group);
     localStorage.setItem('alugaja_rm_groups', JSON.stringify(rmGroups));
     renderGroups();
-    alert(`Grupo "${name}" criado com ${match.name}!`);
+    showToast('Grupo "' + name + '" criado com ' + match.name + '!', 'success');
 }
 
 function loadGroups() {

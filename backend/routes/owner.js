@@ -6,6 +6,7 @@ const Rental = require('../models/Rental');
 const OwnerLead = require('../models/OwnerLead');
 const authMiddleware = require('../middleware/auth');
 const { getLocationData } = require('../services/geolocation');
+const { recalcAgentTier, creditBonus } = require('../services/commissionService');
 const rateLimit = require('express-rate-limit');
 const { validateId } = require('../middleware/validateId');
 
@@ -32,8 +33,8 @@ router.post('/lead', ownerLeadLimiter, async (req, res) => {
             email: email.toLowerCase().trim(),
             phone: phone.substring(0, 20),
             neighborhood: neighborhood.trim().substring(0, 100),
-            propertyType: propertyType || 'apartamento',
-            price: parseFloat(price) || 0
+            propertyType: (propertyType || 'apartamento').substring(0, 50),
+            price: Math.max(0, Math.min(parseFloat(price) || 0, 100000))
         });
 
         res.status(201).json({ message: 'Recebemos seu interesse! Entraremos em contato em até 24 horas.' });
@@ -109,23 +110,60 @@ router.post('/properties', async (req, res) => {
         if (parsedBedrooms < 0) return res.status(400).json({ error: 'Número de quartos inválido' });
         if (parsedBathrooms < 0) return res.status(400).json({ error: 'Número de banheiros inválido' });
 
+        // Validate string lengths
+        if (title.length > 200) return res.status(400).json({ error: 'Título muito longo (máx 200 caracteres)' });
+        if (address.length > 300) return res.status(400).json({ error: 'Endereço muito longo (máx 300 caracteres)' });
+        if (neighborhood.length > 100) return res.status(400).json({ error: 'Bairro muito longo (máx 100 caracteres)' });
+        if (description && description.length > 2000) return res.status(400).json({ error: 'Descrição muito longa (máx 2000 caracteres)' });
+        if (parsedPrice > 100000) return res.status(400).json({ error: 'Preço inválido' });
+        if (parsedBedrooms > 50) return res.status(400).json({ error: 'Número de quartos inválido' });
+        if (parsedBathrooms > 50) return res.status(400).json({ error: 'Número de banheiros inválido' });
+        if (parsedArea > 10000) return res.status(400).json({ error: 'Área inválida' });
+
+        // Validate arrays
+        var safeFeatures = Array.isArray(features) ? features.filter(function(f) { return typeof f === 'string'; }).slice(0, 20).map(function(f) { return f.substring(0, 100); }) : [];
+        var safeImages = Array.isArray(images) ? images.filter(function(f) { return typeof f === 'string'; }).slice(0, 20).map(function(f) { return f.substring(0, 500); }) : [];
+
+        // Validate type enum
+        var validTypes = ['apartamento', 'casa', 'kitnet', 'studio', 'cobertura', 'comercial', 'terreno', 'outro'];
+        var safeType = validTypes.includes(type) ? type : 'apartamento';
+
         var property = await Property.create({
-            title: title,
-            type: type || 'apartamento',
+            title: title.substring(0, 200),
+            type: safeType,
             transaction: 'aluguel',
             price: parsedPrice,
-            address: address,
-            neighborhood: neighborhood,
+            address: address.substring(0, 300),
+            neighborhood: neighborhood.substring(0, 100),
             bedrooms: parsedBedrooms,
             bathrooms: parsedBathrooms,
             area: parsedArea,
-            description: description || '',
-            features: features || [],
-            images: images || [],
-            photos: images || [],
+            description: (description || '').substring(0, 2000),
+            features: safeFeatures,
+            images: safeImages,
+            photos: safeImages,
             agency: req.user.userId,
             status: 'active'
         });
+
+        // Agent rewards: recalc tier + first listing bonus
+        try {
+            var agentUser = await User.findById(req.user.userId);
+            if (agentUser && agentUser.role === 'agency') {
+                await recalcAgentTier(req.user.userId);
+                if (!agentUser.agentProfile || !agentUser.agentProfile.firstListingBonusPaid) {
+                    await creditBonus(req.user.userId, 'bonus_first_listing', 50, 'Bonus primeiro imovel cadastrado', property._id);
+                    await User.findByIdAndUpdate(req.user.userId, { 'agentProfile.firstListingBonusPaid': true });
+                }
+                // Referral bonus: if this agent was referred and this is their first listing
+                if (agentUser.agentProfile && agentUser.agentProfile.referredBy) {
+                    var listingCount = await Property.countDocuments({ agency: req.user.userId });
+                    if (listingCount === 1) {
+                        await creditBonus(agentUser.agentProfile.referredBy, 'bonus_referral', 100, 'Indicacao: ' + agentUser.name + ' cadastrou 1o imovel');
+                    }
+                }
+            }
+        } catch (e) { console.error('Agent rewards error:', e.message); }
 
         // Background geocoding
         if (address || neighborhood) {
@@ -175,6 +213,8 @@ router.delete('/properties/:id', validateId('id'), async (req, res) => {
         var property = await Property.findOne({ _id: req.params.id, agency: req.user.userId });
         if (!property) return res.status(404).json({ error: 'Imóvel não encontrado' });
         await property.deleteOne();
+        // Recalc agent tier after property removal
+        try { await recalcAgentTier(req.user.userId); } catch {}
         res.json({ message: 'Imóvel removido' });
     } catch (e) {
         res.status(500).json({ error: 'Erro ao remover imóvel' });
@@ -186,11 +226,18 @@ router.post('/rentals', async (req, res) => {
     try {
         var { propertyId, tenantEmails } = req.body;
 
+        if (!propertyId || typeof propertyId !== 'string' || !/^[a-f\d]{24}$/i.test(propertyId)) {
+            return res.status(400).json({ error: 'ID do imóvel inválido' });
+        }
+        if (!Array.isArray(tenantEmails) || tenantEmails.length === 0 || tenantEmails.length > 20) {
+            return res.status(400).json({ error: 'Informe de 1 a 20 emails de inquilinos' });
+        }
+
         var property = await Property.findOne({ _id: propertyId, agency: req.user.userId });
         if (!property) return res.status(404).json({ error: 'Imóvel não encontrado' });
 
         var tenants = [];
-        for (var email of (tenantEmails || [])) {
+        for (var email of tenantEmails) {
             var user = await User.findOne({ email: email.toLowerCase().trim() });
             if (user) tenants.push(user._id);
         }
@@ -220,6 +267,21 @@ router.post('/rentals', async (req, res) => {
         // Update property status
         property.status = 'rented';
         await property.save();
+
+        // Agent rewards: recalc tier + fast rental bonus
+        try {
+            if (property.agency) {
+                var listingAgent = await User.findById(property.agency);
+                if (listingAgent && listingAgent.role === 'agency') {
+                    await recalcAgentTier(property.agency);
+                    // Fast rental bonus: rented within 14 days of listing
+                    var daysSinceListing = (Date.now() - new Date(property.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+                    if (daysSinceListing <= 14) {
+                        await creditBonus(property.agency, 'bonus_fast_rental', 30, 'Aluguel rapido em ' + Math.round(daysSinceListing) + ' dias', property._id);
+                    }
+                }
+            }
+        } catch (e) { console.error('Agent rewards rental error:', e.message); }
 
         res.status(201).json({
             rental,

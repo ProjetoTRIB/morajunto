@@ -19,13 +19,36 @@ router.put('/profile', async (req, res) => {
 
         if (!user.roommateProfile) user.roommateProfile = {};
 
-        fields.forEach(f => {
-            if (req.body[f] !== undefined) user.roommateProfile[f] = req.body[f];
-        });
+        // Validate and sanitize each field
+        var stringFields = { bio: 500, gender: 30, occupation: 100, university: 100, neighborhood: 100,
+            smoking: 30, pets: 30, lookingFor: 100, course: 100, genderPreference: 30, sleep: 30 };
+        var numericFields = { age: [18, 120], salary: [0, 100000], budget: [0, 50000],
+            cleanliness: [1, 5], noise: [1, 5], visitors: [1, 5], groupSize: [1, 20],
+            ageMin: [18, 120], ageMax: [18, 120] };
 
-        if (req.body.active !== undefined) user.roommateProfile.active = req.body.active;
-        if (req.body.facebookUrl !== undefined) user.facebookUrl = req.body.facebookUrl;
-        if (req.body.instagramUrl !== undefined) user.instagramUrl = req.body.instagramUrl;
+        for (var f of fields) {
+            if (req.body[f] === undefined) continue;
+            if (stringFields[f] !== undefined) {
+                if (typeof req.body[f] !== 'string') continue;
+                user.roommateProfile[f] = req.body[f].substring(0, stringFields[f]);
+            } else if (numericFields[f]) {
+                var val = Number(req.body[f]);
+                if (isNaN(val)) continue;
+                user.roommateProfile[f] = Math.max(numericFields[f][0], Math.min(val, numericFields[f][1]));
+            } else if (f === 'moveDate') {
+                if (typeof req.body[f] === 'string' && req.body[f].length <= 20) user.roommateProfile[f] = req.body[f];
+            } else if (f === 'photos') {
+                if (Array.isArray(req.body[f])) {
+                    user.roommateProfile[f] = req.body[f].filter(function(p) { return typeof p === 'string'; }).slice(0, 10).map(function(p) { return p.substring(0, 500); });
+                }
+            } else {
+                user.roommateProfile[f] = req.body[f];
+            }
+        }
+
+        if (req.body.active !== undefined) user.roommateProfile.active = !!req.body.active;
+        if (req.body.facebookUrl !== undefined && typeof req.body.facebookUrl === 'string') user.facebookUrl = req.body.facebookUrl.substring(0, 200);
+        if (req.body.instagramUrl !== undefined && typeof req.body.instagramUrl === 'string') user.instagramUrl = req.body.instagramUrl.substring(0, 200);
 
         await user.save();
         res.json({ profile: user.roommateProfile, socialVerified: user.socialVerified });
@@ -282,6 +305,9 @@ router.get('/matches', async (req, res) => {
 router.post('/groups', async (req, res) => {
     try {
         const { matchUserId } = req.body;
+        if (!matchUserId || typeof matchUserId !== 'string' || !/^[a-f\d]{24}$/i.test(matchUserId)) {
+            return res.status(400).json({ error: 'ID do match inválido' });
+        }
         const me = await User.findById(req.user.userId);
         const other = await User.findById(matchUserId);
         if (!me || !other) return res.status(404).json({ error: 'Usuário não encontrado' });
@@ -370,6 +396,9 @@ router.post('/groups/:id/property', validateId('id'), async (req, res) => {
             return res.status(403).json({ error: 'Você não é membro deste grupo' });
         }
 
+        if (!req.body.propertyId || typeof req.body.propertyId !== 'string' || !/^[a-f\d]{24}$/i.test(req.body.propertyId)) {
+            return res.status(400).json({ error: 'ID do imóvel inválido' });
+        }
         group.property = req.body.propertyId;
         group.status = 'found';
         await group.save();

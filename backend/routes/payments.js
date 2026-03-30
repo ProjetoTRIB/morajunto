@@ -6,8 +6,10 @@ const Rental = require('../models/Rental');
 const PaymentTransaction = require('../models/PaymentTransaction');
 const authMiddleware = require('../middleware/auth');
 
+const Property = require('../models/Property');
 const { body, param, validationResult } = require('express-validator');
 const { validateId } = require('../middleware/validateId');
+const { getTierByName, creditAgentCommission } = require('../services/commissionService');
 const MP_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN || '';
 const FEE_PERCENT = 8;
 
@@ -115,8 +117,20 @@ router.post('/generate', authMiddleware, [
         var feePerTenant = Math.round(rentPerTenant * FEE_PERCENT / 100);
         var totalPerTenant = rentPerTenant + feePerTenant;
 
+        // Calculate agent commission from platform fee
+        var property = await Property.findById(rental.property._id || rental.property).select('agency');
+        var agent = property && property.agency ? await User.findById(property.agency).select('agentProfile role') : null;
+        var agentCommissionRate = 0;
+        var agentId = null;
+        if (agent && agent.role === 'agency') {
+            agentId = agent._id;
+            var agentTier = getTierByName(agent.agentProfile ? agent.agentProfile.tier : 'iniciante');
+            agentCommissionRate = agentTier.rate;
+        }
+
         var transactions = [];
         for (var tenant of rental.tenants) {
+            var agentCommissionAmount = Math.round(feePerTenant * agentCommissionRate);
             var tx = await PaymentTransaction.create({
                 rental: rental._id,
                 property: rental.property._id,
@@ -130,6 +144,9 @@ router.post('/generate', authMiddleware, [
                 feeAmount: feePerTenant,
                 totalAmount: totalPerTenant,
                 ownerReceives: rentPerTenant,
+                agentId: agentId,
+                agentCommission: agentCommissionAmount,
+                platformNet: feePerTenant - agentCommissionAmount,
                 status: 'pending'
             });
             transactions.push(tx);
@@ -230,6 +247,7 @@ router.get('/:id/status', validateId('id'), authMiddleware, async (req, res) => 
                     tx.mpStatus = 'approved';
                     tx.paidAt = new Date();
                     await tx.save();
+                    await creditAgentCommission(tx);
                 }
             } catch (e) { /* MP check failed, return current status */ }
         }
@@ -258,7 +276,10 @@ router.post('/:id/confirm', validateId('id'), authMiddleware, async (req, res) =
 
         if (tx.status === 'paid') return res.status(400).json({ error: 'Já foi pago' });
 
-        // Only allow manual confirmation for simulation mode
+        // Only allow manual confirmation for simulation mode (non-production)
+        if (process.env.NODE_ENV === 'production') {
+            return res.status(403).json({ error: 'Confirmação manual desabilitada em produção. Pagamentos são confirmados automaticamente via Mercado Pago.' });
+        }
         if (tx.mpPaymentId && tx.mpStatus !== 'simulation') {
             return res.status(400).json({ error: 'Pagamento via PIX deve ser confirmado automaticamente pelo Mercado Pago' });
         }
@@ -268,6 +289,7 @@ router.post('/:id/confirm', validateId('id'), authMiddleware, async (req, res) =
         tx.mpStatus = 'manual_confirm';
         tx.confirmedBy = req.user.userId;
         await tx.save();
+        await creditAgentCommission(tx);
 
         res.json({
             message: 'Pagamento confirmado manualmente!',
@@ -288,8 +310,12 @@ const crypto = require('crypto');
 
 router.post('/webhook', express.json(), async (req, res) => {
     try {
-        // Verify Mercado Pago webhook signature if secret is configured
-        if (process.env.MP_WEBHOOK_SECRET) {
+        // Verify Mercado Pago webhook signature (REQUIRED)
+        if (!process.env.MP_WEBHOOK_SECRET) {
+            console.error('Webhook: MP_WEBHOOK_SECRET não configurado — rejeitando webhook');
+            return res.sendStatus(500);
+        }
+        {
             var mpSignature = req.headers['x-signature'];
             var mpRequestId = req.headers['x-request-id'];
             if (!mpSignature || !mpRequestId) {
@@ -340,6 +366,7 @@ router.post('/webhook', express.json(), async (req, res) => {
                 tx.mpPaymentId = String(mpResult.id);
                 tx.paidAt = new Date();
                 await tx.save();
+                await creditAgentCommission(tx);
                 console.log('💰 Pagamento confirmado via webhook: R$' + tx.totalAmount + ' (taxa: R$' + tx.feeAmount + ')');
             }
         }
@@ -403,7 +430,7 @@ router.get('/admin/dashboard', authMiddleware, async (req, res) => {
         var user = await User.findById(req.user.userId);
         if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
 
-        var allTx = await PaymentTransaction.find().limit(5000);
+        var allTx = await PaymentTransaction.find().limit(500).sort({ createdAt: -1 });
         var totalCollected = 0;
         var totalFees = 0;
         var totalPending = 0;
