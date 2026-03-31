@@ -166,6 +166,8 @@ function showPage(page, scrollTo) {
         loadTenantPanel();
     } else if (page === 'chat' && typeof initChat === 'function') {
         initChat();
+    } else if (page === 'referral') {
+        loadMyReferrals();
     }
 
     closeMobileMenu();
@@ -217,8 +219,11 @@ function updateNavAuth(loggedIn) {
     const navChat = document.getElementById('navChat');
     const navChatMobile = document.getElementById('navChatMobile');
 
+    const navReferral = document.getElementById('navReferral');
+
     if (loggedIn && currentUser) {
-        // Show chat for all logged-in users
+        // Show referral and chat for all logged-in users
+        if (navReferral) navReferral.classList.remove('hidden');
         if (navChat) navChat.classList.remove('hidden');
         if (navChatMobile) navChatMobile.classList.remove('hidden');
         var bottomChat = document.getElementById('bottomNavChat');
@@ -267,6 +272,7 @@ function updateNavAuth(loggedIn) {
         navAdminMobile.style.display = 'none';
         if (navOwnerMobile) navOwnerMobile.style.display = 'none';
         if (navTenantMobile) navTenantMobile.style.display = 'none';
+        if (navReferral) navReferral.classList.add('hidden');
         if (navChat) navChat.classList.add('hidden');
         if (navChatMobile) navChatMobile.classList.add('hidden');
     }
@@ -1366,6 +1372,190 @@ function copyReferralCode() {
     }
 }
 
+// ===== PROPERTY REFERRALS (Indique um Imovel) =====
+async function submitReferral(event) {
+    event.preventDefault();
+    clearFormFeedback('referralFeedback');
+
+    if (!currentToken) {
+        showFormFeedback('referralFeedback', 'Faca login para indicar um imovel', 'error');
+        return;
+    }
+
+    const payload = {
+        address: document.getElementById('refAddress').value.trim(),
+        neighborhood: document.getElementById('refNeighborhood').value.trim(),
+        ownerName: document.getElementById('refOwnerName').value.trim(),
+        ownerPhone: document.getElementById('refOwnerPhone').value.trim(),
+        ownerEmail: document.getElementById('refOwnerEmail').value.trim(),
+        description: document.getElementById('refDescription').value.trim(),
+        photos: document.getElementById('refPhotos').value.split('\n').map(s => s.trim()).filter(Boolean)
+    };
+
+    try {
+        const res = await fetch(API + '/referrals', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showFormFeedback('referralFeedback', data.message || 'Indicacao enviada!', 'success');
+            document.getElementById('referralForm').reset();
+            loadMyReferrals();
+        } else {
+            showFormFeedback('referralFeedback', data.error || 'Erro ao enviar', 'error');
+        }
+    } catch {
+        showFormFeedback('referralFeedback', 'Erro de conexao', 'error');
+    }
+}
+
+async function loadMyReferrals() {
+    const container = document.getElementById('myReferralsList');
+    if (!container) return;
+    if (!currentToken) {
+        container.innerHTML = '<p style="color:var(--text-muted);text-align:center">Faca login para ver suas indicacoes</p>';
+        return;
+    }
+
+    try {
+        const res = await fetch(API + '/referrals/my', {
+            headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        const referrals = data.referrals || [];
+
+        if (referrals.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-muted);text-align:center">Nenhuma indicacao ainda. Indique seu primeiro imovel!</p>';
+            return;
+        }
+
+        const statusMap = {
+            pending: { label: 'Pendente', color: '#f59e0b', bg: 'rgba(245,158,11,.1)' },
+            validated: { label: 'Validada', color: '#6366f1', bg: 'rgba(99,102,241,.1)' },
+            listed: { label: 'Anunciada', color: '#8b5cf6', bg: 'rgba(139,92,246,.1)' },
+            rented: { label: 'Alugada', color: '#10b981', bg: 'rgba(16,185,129,.1)' },
+            paid: { label: 'Paga!', color: '#059669', bg: 'rgba(5,150,105,.15)' },
+            rejected: { label: 'Rejeitada', color: '#ef4444', bg: 'rgba(239,68,68,.1)' }
+        };
+
+        container.innerHTML = referrals.map(function(r) {
+            var s = statusMap[r.status] || statusMap.pending;
+            var date = r.createdAt ? new Date(r.createdAt).toLocaleDateString('pt-BR') : '';
+            var reward = r.status === 'paid' && r.rewardAmount ? '<br><span style="color:#059669;font-weight:700">+ R$ ' + r.rewardAmount.toFixed(2).replace('.', ',') + '</span>' : '';
+            var rejection = r.status === 'rejected' && r.rejectionReason ? '<br><span style="font-size:0.8rem;color:#ef4444">' + escapeHtml(r.rejectionReason) + '</span>' : '';
+            return '<div style="padding:0.8rem 0;border-bottom:1px solid var(--border-color)">' +
+                '<div style="display:flex;justify-content:space-between;align-items:start">' +
+                '<div><strong style="font-size:0.9rem">' + escapeHtml(r.address) + '</strong>' +
+                '<br><span style="font-size:0.8rem;color:var(--text-muted)">' + escapeHtml(r.neighborhood) + ' — ' + date + '</span>' +
+                reward + rejection + '</div>' +
+                '<span style="font-size:0.75rem;font-weight:600;padding:3px 10px;border-radius:20px;background:' + s.bg + ';color:' + s.color + '">' + s.label + '</span>' +
+                '</div></div>';
+        }).join('');
+    } catch {
+        container.innerHTML = '<p style="color:var(--text-muted);text-align:center">Erro ao carregar indicacoes</p>';
+    }
+}
+
+function shareReferralWhatsApp() {
+    var text = 'Conhece um imovel vazio em Ribeirao Preto? Indique pelo MoraJunto e ganhe ate R$150 quando for alugado! Acesse: ' + window.location.origin;
+    window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+
+// ===== ADMIN REFERRALS =====
+async function loadAdminReferrals(statusFilter) {
+    var tbody = document.getElementById('adminReferralsTbody');
+    if (!tbody) return;
+
+    try {
+        var url = API + '/referrals' + (statusFilter ? '?status=' + statusFilter : '');
+        const res = await fetch(url, {
+            headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        var referrals = data.referrals || [];
+
+        if (referrals.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Nenhuma indicacao</td></tr>';
+            return;
+        }
+
+        var statusLabels = { pending: 'Pendente', validated: 'Validada', listed: 'Anunciada', rented: 'Alugada', paid: 'Paga', rejected: 'Rejeitada' };
+        var statusColors = { pending: '#f59e0b', validated: '#6366f1', listed: '#8b5cf6', rented: '#10b981', paid: '#059669', rejected: '#ef4444' };
+
+        tbody.innerHTML = referrals.map(function(r) {
+            var refName = r.referrer ? escapeHtml(r.referrer.name || r.referrer.email) : 'Desconhecido';
+            var date = r.createdAt ? new Date(r.createdAt).toLocaleDateString('pt-BR') : '';
+            var color = statusColors[r.status] || '#94a3b8';
+
+            var actions = '';
+            if (r.status === 'pending') {
+                actions = '<button class="btn btn-sm btn-accent" onclick="updateReferralStatus(\'' + r._id + '\',\'validated\')">Validar</button> ' +
+                    '<button class="btn btn-sm btn-outline" onclick="updateReferralStatus(\'' + r._id + '\',\'rejected\')">Rejeitar</button>';
+            } else if (r.status === 'validated') {
+                actions = '<button class="btn btn-sm btn-accent" onclick="updateReferralStatus(\'' + r._id + '\',\'listed\')">Vincular</button>';
+            } else if (r.status === 'listed') {
+                actions = '<button class="btn btn-sm btn-accent" onclick="updateReferralStatus(\'' + r._id + '\',\'rented\')">Alugado</button>';
+            } else if (r.status === 'rented') {
+                actions = '<button class="btn btn-sm" style="background:#059669;color:#fff" onclick="updateReferralStatus(\'' + r._id + '\',\'paid\')">Pagar</button>';
+            } else if (r.status === 'paid') {
+                actions = '<span style="color:#059669;font-weight:600">R$ ' + (r.rewardAmount || 0).toFixed(2).replace('.', ',') + '</span>';
+            }
+
+            return '<tr>' +
+                '<td>' + refName + '</td>' +
+                '<td>' + escapeHtml(r.address) + '</td>' +
+                '<td>' + escapeHtml(r.neighborhood) + '</td>' +
+                '<td>' + escapeHtml(r.ownerName) + '<br><span style="font-size:0.8rem;color:var(--text-muted)">' + escapeHtml(r.ownerPhone) + '</span></td>' +
+                '<td><span style="color:' + color + ';font-weight:600">' + (statusLabels[r.status] || r.status) + '</span></td>' +
+                '<td>' + date + '</td>' +
+                '<td>' + actions + '</td></tr>';
+        }).join('');
+    } catch {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Erro ao carregar</td></tr>';
+    }
+}
+
+async function updateReferralStatus(id, status) {
+    var body = { status: status };
+
+    if (status === 'rejected') {
+        var reason = prompt('Motivo da rejeicao:');
+        if (reason === null) return;
+        body.rejectionReason = reason;
+    }
+    if (status === 'listed') {
+        var propertyId = prompt('ID do imovel cadastrado (cole o _id do MongoDB):');
+        if (!propertyId) return;
+        body.propertyId = propertyId.trim();
+    }
+    if (status === 'paid') {
+        var amount = prompt('Valor da recompensa (R$):', '100');
+        if (!amount) return;
+        body.rewardAmount = parseFloat(amount);
+    }
+
+    try {
+        const res = await fetch(API + '/referrals/' + id + '/status', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.message || 'Atualizado!');
+            loadAdminReferrals('');
+        } else {
+            alert(data.error || 'Erro');
+        }
+    } catch {
+        alert('Erro de conexao');
+    }
+}
+
 // ===== ADD / EDIT PROPERTY =====
 async function saveProperty(e) {
     e.preventDefault();
@@ -1620,11 +1810,13 @@ function switchAdminTab(tab) {
     document.querySelectorAll('#page-admin .dash-tab-content').forEach(c => c.classList.remove('active'));
 
     const tabs = document.querySelectorAll('#page-admin .dash-tab');
-    const tabMap = { properties: 0, agencies: 1, leads: 2 };
+    const tabMap = { properties: 0, agencies: 1, leads: 2, referrals: 3 };
     if (tabs[tabMap[tab]]) tabs[tabMap[tab]].classList.add('active');
 
     const content = document.getElementById('adminTab-' + tab);
     if (content) content.classList.add('active');
+
+    if (tab === 'referrals') loadAdminReferrals('');
 }
 
 // ===== FORMAT HELPERS =====

@@ -268,6 +268,7 @@ app.use('/api/chat', require('./backend/routes/chat'));
 app.use('/api/reports', require('./backend/routes/reports'));
 app.use('/api/verification', require('./backend/routes/verification'));
 app.use('/api/agent-rewards', require('./backend/routes/agentRewards'));
+app.use('/api/referrals', require('./backend/routes/referrals'));
 
 // Public stats (homepage)
 app.get('/api/stats', async (req, res) => {
