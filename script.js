@@ -2121,6 +2121,277 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// ===== CUSTOM SELECT COMPONENT =====
+var _csInstances = [];
+
+function initCustomSelect(selectEl, opts) {
+    if (!selectEl) return;
+    opts = opts || {};
+
+    // Build dropdown DOM
+    var dd = document.createElement('div');
+    dd.className = 'cs-dropdown';
+    dd.setAttribute('role', 'combobox');
+    dd.setAttribute('aria-expanded', 'false');
+    dd.setAttribute('aria-haspopup', 'listbox');
+    dd.tabIndex = 0;
+
+    var trigger = document.createElement('div');
+    trigger.className = 'cs-trigger';
+    var valueSpan = document.createElement('span');
+    valueSpan.className = 'cs-value';
+    trigger.appendChild(valueSpan);
+    trigger.insertAdjacentHTML('beforeend', '<svg class="cs-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>');
+    dd.appendChild(trigger);
+
+    var panel = document.createElement('div');
+    panel.className = 'cs-panel';
+    panel.setAttribute('role', 'listbox');
+
+    // Search (for searchable selects)
+    var searchInput = null;
+    if (opts.searchable) {
+        var sw = document.createElement('div');
+        sw.className = 'cs-search-wrap';
+        sw.style.position = 'relative';
+        sw.innerHTML = '<svg class="cs-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>';
+        searchInput = document.createElement('input');
+        searchInput.className = 'cs-search';
+        searchInput.type = 'text';
+        searchInput.placeholder = 'Buscar bairro...';
+        searchInput.setAttribute('aria-label', 'Filtrar opções');
+        sw.appendChild(searchInput);
+        panel.appendChild(sw);
+    }
+
+    var optionsContainer = document.createElement('div');
+    optionsContainer.className = 'cs-options';
+
+    // Parse native select
+    var allOptionEls = [];
+    Array.from(selectEl.children).forEach(function(child) {
+        if (child.tagName === 'OPTGROUP') {
+            var group = document.createElement('div');
+            group.className = 'cs-group';
+            group.setAttribute('role', 'group');
+            var label = document.createElement('div');
+            label.className = 'cs-group-label';
+            label.textContent = child.label;
+            group.appendChild(label);
+            Array.from(child.children).forEach(function(opt) {
+                var el = buildOption(opt);
+                group.appendChild(el);
+                allOptionEls.push(el);
+            });
+            optionsContainer.appendChild(group);
+        } else if (child.tagName === 'OPTION') {
+            var el = buildOption(child);
+            optionsContainer.appendChild(el);
+            allOptionEls.push(el);
+        }
+    });
+
+    function buildOption(opt) {
+        var div = document.createElement('div');
+        div.className = 'cs-option';
+        div.setAttribute('role', 'option');
+        div.dataset.value = opt.value;
+        // Icon
+        if (opts.icons && opts.icons[opt.value]) {
+            var iconWrap = document.createElement('span');
+            iconWrap.className = 'cs-option-icon';
+            iconWrap.innerHTML = opts.icons[opt.value];
+            div.appendChild(iconWrap);
+        }
+        // Tier dot
+        if (opts.tierColors && opts.tierColors[opt.value]) {
+            var dot = document.createElement('span');
+            dot.className = 'cs-tier-dot cs-tier-' + opts.tierColors[opt.value].tier;
+            div.appendChild(dot);
+        }
+        var text = document.createElement('span');
+        text.textContent = opt.textContent;
+        div.appendChild(text);
+        if (opt.selected) div.classList.add('cs-selected');
+        return div;
+    }
+
+    panel.appendChild(optionsContainer);
+    dd.appendChild(panel);
+
+    // Insert into DOM
+    var wrap = selectEl.closest('.budget-select-wrap');
+    // Hide original select icon
+    var oldIcon = wrap.querySelector('.budget-select-icon');
+    if (oldIcon) oldIcon.style.display = 'none';
+    selectEl.classList.add('cs-sr-only', 'cs-has-custom');
+    selectEl.tabIndex = -1;
+    wrap.appendChild(dd);
+
+    // Set initial value display
+    function updateDisplay() {
+        var sel = selectEl.options[selectEl.selectedIndex];
+        valueSpan.textContent = sel ? sel.textContent : '';
+        allOptionEls.forEach(function(el) {
+            el.classList.toggle('cs-selected', el.dataset.value === selectEl.value);
+        });
+    }
+    updateDisplay();
+
+    // Toggle open/close
+    var focusedIdx = -1;
+    function open() {
+        dd.setAttribute('aria-expanded', 'true');
+        // Set focused to current selected
+        focusedIdx = allOptionEls.findIndex(function(el) { return el.classList.contains('cs-selected'); });
+        updateFocus();
+        if (searchInput) { searchInput.value = ''; filterOptions(''); setTimeout(function() { searchInput.focus(); }, 50); }
+    }
+    function close() {
+        dd.setAttribute('aria-expanded', 'false');
+        focusedIdx = -1;
+        allOptionEls.forEach(function(el) { el.classList.remove('cs-focused'); });
+    }
+    function isOpen() { return dd.getAttribute('aria-expanded') === 'true'; }
+
+    function selectOption(optEl) {
+        selectEl.value = optEl.dataset.value;
+        selectEl.dispatchEvent(new Event('change'));
+        updateDisplay();
+        close();
+        dd.focus();
+    }
+
+    function updateFocus() {
+        allOptionEls.forEach(function(el, i) {
+            el.classList.toggle('cs-focused', i === focusedIdx);
+        });
+        if (focusedIdx >= 0 && allOptionEls[focusedIdx]) {
+            allOptionEls[focusedIdx].scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    function getVisibleOptions() {
+        return allOptionEls.filter(function(el) { return el.style.display !== 'none'; });
+    }
+
+    // Events
+    trigger.addEventListener('click', function(e) {
+        e.stopPropagation();
+        isOpen() ? close() : open();
+    });
+
+    allOptionEls.forEach(function(el) {
+        el.addEventListener('click', function(e) {
+            e.stopPropagation();
+            selectOption(el);
+        });
+    });
+
+    dd.addEventListener('keydown', function(e) {
+        var visible = getVisibleOptions();
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            if (!isOpen()) { open(); }
+            else if (focusedIdx >= 0 && allOptionEls[focusedIdx]) { selectOption(allOptionEls[focusedIdx]); }
+        } else if (e.key === 'Escape') {
+            close(); dd.focus();
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (!isOpen()) { open(); return; }
+            var nextIdx = focusedIdx + 1;
+            while (nextIdx < allOptionEls.length && allOptionEls[nextIdx].style.display === 'none') nextIdx++;
+            if (nextIdx < allOptionEls.length) { focusedIdx = nextIdx; updateFocus(); }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            var prevIdx = focusedIdx - 1;
+            while (prevIdx >= 0 && allOptionEls[prevIdx].style.display === 'none') prevIdx--;
+            if (prevIdx >= 0) { focusedIdx = prevIdx; updateFocus(); }
+        }
+    });
+
+    // Search filter
+    if (searchInput) {
+        searchInput.addEventListener('input', function() { filterOptions(this.value); });
+        searchInput.addEventListener('keydown', function(e) { e.stopPropagation(); dd.dispatchEvent(new KeyboardEvent('keydown', { key: e.key })); if (e.key === 'ArrowDown' || e.key === 'ArrowUp') e.preventDefault(); });
+    }
+
+    function filterOptions(q) {
+        var query = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        var anyVisible = false;
+        allOptionEls.forEach(function(el) {
+            var text = el.textContent.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            var show = !query || text.indexOf(query) !== -1;
+            el.style.display = show ? '' : 'none';
+            if (show) anyVisible = true;
+        });
+        // Hide empty groups
+        optionsContainer.querySelectorAll('.cs-group').forEach(function(g) {
+            var hasVisible = g.querySelector('.cs-option:not([style*="display: none"])');
+            g.style.display = hasVisible ? '' : 'none';
+        });
+        // No results message
+        var existing = optionsContainer.querySelector('.cs-no-results');
+        if (!anyVisible && !existing) {
+            optionsContainer.insertAdjacentHTML('beforeend', '<div class="cs-no-results">Nenhum bairro encontrado</div>');
+        } else if (anyVisible && existing) {
+            existing.remove();
+        }
+        focusedIdx = -1;
+    }
+
+    // Close on outside click
+    _csInstances.push({ dd: dd, close: close, updateDisplay: updateDisplay });
+}
+
+// Global click-outside handler
+document.addEventListener('click', function() {
+    _csInstances.forEach(function(inst) { inst.close(); });
+});
+
+function syncCustomSelects() {
+    _csInstances.forEach(function(inst) { inst.updateDisplay(); });
+}
+
+// Initialize custom selects on load
+function _initAllCustomSelects() {
+    if (window._csInitDone || window.matchMedia('(pointer: coarse)').matches) return;
+    window._csInitDone = true;
+
+    var personIcons = {
+        '1': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+        '2': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-3-3.87M9 21v-2a4 4 0 00-4-4H5"/><circle cx="9" cy="7" r="4"/><circle cx="17" cy="7" r="3"/></svg>',
+        '3': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><circle cx="19" cy="7" r="3"/></svg>',
+        '4': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><circle cx="20" cy="7" r="3"/></svg>'
+    };
+
+    var bedroomIcons = {
+        '1': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v11m0-4h18m0-7v11M7 11V7h4v4m2 0V7h4v4"/></svg>',
+        '2': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v11m0-4h18m0-7v11M7 11V7h4v4m2 0V7h4v4"/></svg>',
+        '3': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v11m0-4h18m0-7v11M7 11V7h4v4m2 0V7h4v4"/></svg>',
+        '4': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v11m0-4h18m0-7v11M7 11V7h4v4m2 0V7h4v4"/></svg>'
+    };
+
+    initCustomSelect(document.getElementById('budgetGroupSize'), { icons: personIcons });
+    initCustomSelect(document.getElementById('budgetBedrooms'), { icons: bedroomIcons });
+
+    // Wait for RP_RENTAL_DATA to be available (defined below)
+    setTimeout(function() {
+        var tierColors = {};
+        if (typeof RP_RENTAL_DATA !== 'undefined') {
+            Object.keys(RP_RENTAL_DATA.neighborhoods).forEach(function(key) {
+                tierColors[key] = RP_RENTAL_DATA.neighborhoods[key];
+            });
+        }
+        initCustomSelect(document.getElementById('budgetNeighborhood'), { searchable: true, tierColors: tierColors });
+    }, 0);
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initAllCustomSelects);
+} else {
+    _initAllCustomSelects();
+}
+
 // ===== BUDGET CALCULATOR =====
 // ===== DADOS REAIS DE RIBEIRÃO PRETO (2025/2026) =====
 // Fontes: QuintoAndar, ZAP, MySide, CRECISP, Numbeo, CPFL, DAERP
@@ -2263,6 +2534,7 @@ function calculateBudget() {
     document.getElementById('budgetNeighborhoods').innerHTML = hoodHtml;
 
     window._budgetMaxRent = estimatedRent;
+    if (typeof syncCustomSelects === 'function') syncCustomSelects();
 }
 
 function filterByBudget() {
