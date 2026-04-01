@@ -50,39 +50,13 @@ router.get('/payments', async (req, res) => {
     }
 });
 
-// POST /api/tenant/payments/:rentalId/:paymentId/pay — marcar como pago (simulado)
+// POST /api/tenant/payments/:rentalId/:paymentId/pay — DESABILITADO (usar Mercado Pago)
+// Endpoint antigo de pagamento simulado removido por segurança.
+// Pagamentos devem ser feitos exclusivamente via Mercado Pago PIX.
 router.post('/payments/:rentalId/:paymentId/pay', validateId('rentalId'), validateId('paymentId'), async (req, res) => {
-    try {
-        var rental = await Rental.findById(req.params.rentalId);
-        if (!rental) return res.status(404).json({ error: 'Aluguel não encontrado' });
-
-        var payment = rental.payments.id(req.params.paymentId);
-        if (!payment) return res.status(404).json({ error: 'Pagamento não encontrado' });
-
-        if (payment.tenant.toString() !== req.user.userId) {
-            return res.status(403).json({ error: 'Este pagamento não é seu' });
-        }
-
-        if (payment.status === 'paid') {
-            return res.status(400).json({ error: 'Pagamento já realizado' });
-        }
-
-        payment.status = 'paid';
-        payment.paidAt = new Date();
-        await rental.save();
-
-        res.json({
-            message: 'Pagamento confirmado!',
-            summary: {
-                valor: payment.amount,
-                taxaMoraJunto: payment.feeIncluded,
-                aluguel: payment.amount - payment.feeIncluded,
-                mes: payment.month
-            }
-        });
-    } catch (e) {
-        res.status(500).json({ error: 'Erro ao processar pagamento' });
-    }
+    return res.status(403).json({
+        error: 'Pagamento simulado desabilitado. Use o sistema de pagamento via PIX (Mercado Pago).'
+    });
 });
 
 module.exports = router;

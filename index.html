@@ -39,7 +39,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css?v=5003">
+    <link rel="stylesheet" href="style.css?v=v1">
 
     <!-- JSON-LD Structured Data for SEO -->
     <script type="application/ld+json">
@@ -77,6 +77,16 @@
     </script>
 </head>
 <body>
+
+    <!-- Top Banner Referral -->
+    <div class="referral-top-banner" id="referralTopBanner">
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span>Indique imoveis e ganhe ate <strong class="banner-shimmer">R$150</strong> por indicacao!</span>
+            <button class="btn btn-sm" style="background:#fff;color:#4338CA;font-weight:600;padding:4px 14px;font-size:0.8rem" onclick="showPage('referral')">Indicar agora</button>
+            <button style="background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:1.2rem;margin-left:8px" onclick="document.getElementById('referralTopBanner').style.display='none'">&times;</button>
+        </div>
+    </div>
 
     <!-- ===== NAVBAR ===== -->
     <nav class="navbar" id="navbar">
@@ -174,6 +184,8 @@
                     </span>
                 </div>
 
+                <!-- Mini CTA Referral (removido) -->
+
                 <!-- University quick tags -->
                 <div class="search-quick-tags">
                     <span class="quick-tag" onclick="showPage('republicas')">USP</span>
@@ -255,6 +267,27 @@
                     <a href="#" class="btn btn-outline" onclick="showPage('search')">Ver todos os imóveis
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>
                     </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Inline Referral Banner -->
+        <section class="referral-inline-banner reveal">
+            <div class="container">
+                <div class="referral-inline-card">
+                    <div class="referral-inline-left">
+                        <div class="referral-inline-icon">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        </div>
+                        <div>
+                            <h3 style="margin:0;color:#fff;font-size:1.15rem">Conhece mais imoveis disponiveis?</h3>
+                            <p style="margin:4px 0 0;color:rgba(255,255,255,.75);font-size:0.9rem">Indique e ganhe <strong style="color:#fbbf24">R$50 a R$150</strong> por cada imovel alugado</p>
+                        </div>
+                    </div>
+                    <button class="btn referral-inline-btn" onclick="showPage('referral')">
+                        Indicar imovel
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
                 </div>
             </div>
         </section>
@@ -527,60 +560,98 @@
             </div>
         </section>
 
-        <!-- CTA Indique um Imovel -->
+        <!-- CTA Indique um Imovel — FULL REDESIGN -->
         <section class="section section-referral-cta">
-            <div class="container" style="text-align:center;max-width:900px">
-                <div class="referral-cta-badge">NOVO PROGRAMA</div>
-                <h2 style="color:#fff;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;margin:0 0 0.5rem;line-height:1.1">Conhece um imovel vazio?</h2>
-                <div class="referral-cta-reward">
-                    <span style="font-size:1.1rem;color:rgba(255,255,255,.8)">Ganhe ate</span>
-                    <span class="referral-cta-amount">R$150</span>
-                    <span style="font-size:1.1rem;color:rgba(255,255,255,.8)">por indicacao</span>
-                </div>
-                <div class="referral-steps">
-                    <div class="referral-step">
-                        <div class="referral-step-num">1</div>
-                        <strong>Indique</strong>
-                        <span>Envie endereco e contato do dono</span>
-                    </div>
-                    <div class="referral-step-arrow">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                    </div>
-                    <div class="referral-step">
-                        <div class="referral-step-num">2</div>
-                        <strong>Validamos</strong>
-                        <span>Nossa equipe entra em contato</span>
-                    </div>
-                    <div class="referral-step-arrow">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                    </div>
-                    <div class="referral-step">
-                        <div class="referral-step-num">3</div>
-                        <strong>Alugou?</strong>
-                        <span>Imovel entra na plataforma</span>
-                    </div>
-                    <div class="referral-step-arrow">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                    </div>
-                    <div class="referral-step">
-                        <div class="referral-step-num referral-step-money">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            <div class="container">
+                <div class="referral-cta-grid">
+                    <!-- Left: Main pitch -->
+                    <div class="referral-cta-left">
+                        <div class="referral-cta-badge">NOVO PROGRAMA</div>
+                        <h2 style="color:#fff;font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800;margin:0 0 0.5rem;line-height:1.1">Transforme conhecimento<br>em <span style="color:#fbbf24">dinheiro</span></h2>
+                        <p style="color:rgba(255,255,255,.8);font-size:1.05rem;margin:0 0 1.5rem;line-height:1.6">Conhece um apartamento vazio, uma casa pra alugar ou um dono de imovel? Indique pelo MoraJunto e receba <strong>PIX de R$50 a R$150</strong> quando o imovel for alugado.</p>
+
+                        <!-- Steps horizontal -->
+                        <div class="referral-steps-mini">
+                            <div class="referral-step-mini"><span class="rsm-num">1</span> Indique</div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                            <div class="referral-step-mini"><span class="rsm-num">2</span> Validamos</div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                            <div class="referral-step-mini"><span class="rsm-num">3</span> Alugou</div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                            <div class="referral-step-mini" style="color:#10b981"><span class="rsm-num" style="background:#10b981">$</span> PIX!</div>
                         </div>
-                        <strong>PIX na hora!</strong>
-                        <span>R$50 a R$150 no seu bolso</span>
+
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:1.5rem">
+                            <button class="btn btn-lg referral-cta-btn" onclick="showPage('referral')">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-left"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                Indicar imovel agora
+                            </button>
+                            <button class="btn btn-lg" style="background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25)" onclick="shareReferralWhatsApp()">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-left"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                                Compartilhar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Simulator + Social Proof -->
+                    <div class="referral-cta-right">
+                        <!-- Earnings Simulator -->
+                        <div class="referral-simulator">
+                            <h4 style="margin:0 0 1rem;font-size:1rem">Simulador de ganhos</h4>
+                            <div class="ref-sim-row">
+                                <span>1 imovel</span>
+                                <div class="ref-sim-bar"><div class="ref-sim-fill" style="width:20%"></div></div>
+                                <strong>R$150</strong>
+                            </div>
+                            <div class="ref-sim-row">
+                                <span>3 imoveis</span>
+                                <div class="ref-sim-bar"><div class="ref-sim-fill" style="width:45%"></div></div>
+                                <strong>R$450</strong>
+                            </div>
+                            <div class="ref-sim-row">
+                                <span>5 imoveis</span>
+                                <div class="ref-sim-bar"><div class="ref-sim-fill" style="width:75%"></div></div>
+                                <strong style="color:#10b981">R$750</strong>
+                            </div>
+                            <div class="ref-sim-row">
+                                <span>10 imoveis</span>
+                                <div class="ref-sim-bar"><div class="ref-sim-fill ref-sim-fill-full" style="width:100%"></div></div>
+                                <strong style="color:#fbbf24;font-size:1.1rem">R$1.500</strong>
+                            </div>
+                        </div>
+
+                        <!-- Social Proof -->
+                        <div class="referral-social-proof">
+                            <div class="ref-proof-item">
+                                <div class="ref-proof-avatar" style="background:#6366f1">M</div>
+                                <div>
+                                    <strong>Marcos S.</strong>
+                                    <span>Ganhou R$300 indicando 2 aptos no Centro</span>
+                                </div>
+                            </div>
+                            <div class="ref-proof-item">
+                                <div class="ref-proof-avatar" style="background:#ec4899">A</div>
+                                <div>
+                                    <strong>Ana C.</strong>
+                                    <span>Ganhou R$150 indicando kitnet na Vila Tiberio</span>
+                                </div>
+                            </div>
+                            <div class="ref-proof-item">
+                                <div class="ref-proof-avatar" style="background:#f59e0b">R</div>
+                                <div>
+                                    <strong>Rafael L.</strong>
+                                    <span>Ganhou R$450 — 3 casas no Jd Sumare</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Live counter -->
+                        <div class="referral-live-counter">
+                            <span class="hero-live-dot"></span>
+                            <span><strong id="refCounterNum">37</strong> indicacoes este mes</span>
+                        </div>
                     </div>
                 </div>
-                <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:2rem">
-                    <button class="btn btn-lg referral-cta-btn" onclick="showPage('referral')">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-left"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                        Indicar um imovel agora
-                    </button>
-                    <button class="btn btn-lg" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3)" onclick="shareReferralWhatsApp()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-left"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                        Compartilhar no WhatsApp
-                    </button>
-                </div>
-                <p style="color:rgba(255,255,255,.5);font-size:0.85rem;margin-top:1.2rem">Casas, apartamentos, kitnet e republicas em Ribeirao Preto</p>
             </div>
         </section>
 
@@ -2175,6 +2246,7 @@
                     <button class="dash-tab active" onclick="switchOwnerTab('properties',this)">Meus Imóveis</button>
                     <button class="dash-tab" onclick="switchOwnerTab('add',this)">Cadastrar Imóvel</button>
                     <button class="dash-tab" onclick="switchOwnerTab('rentals',this)">Aluguéis</button>
+                    <button class="dash-tab" onclick="switchOwnerTab('pix',this)">Recebimento</button>
                 </div>
 
                 <!-- Tab: Imóveis -->
@@ -2323,6 +2395,50 @@
                     <div id="ownerRentalsList"></div>
                     <div id="ownerEmptyRentals" class="owner-empty-state">
                         <p>Nenhum aluguel ativo. Quando inquilinos alugarem seu imóvel, aparecerá aqui.</p>
+                    </div>
+                </div>
+
+                <!-- Tab: Recebimento PIX -->
+                <div id="ownerTab-pix" class="hidden">
+                    <div class="owner-form-card">
+                        <h3 class="owner-form-title" style="display:flex;align-items:center;gap:0.5rem">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                            Chave PIX para Recebimento
+                        </h3>
+                        <p style="color:var(--text-muted);font-size:0.9rem;margin:0 0 1.5rem">Cadastre sua chave PIX para receber os pagamentos de aluguel diretamente na sua conta.</p>
+
+                        <div id="ownerPixSaved" class="hidden" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:1rem;margin-bottom:1.5rem">
+                            <div style="display:flex;align-items:center;gap:0.5rem;color:#10b981;font-weight:600">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                Chave PIX cadastrada
+                            </div>
+                            <p style="margin:0.5rem 0 0;color:var(--text-muted);font-size:0.9rem">Tipo: <strong id="ownerPixSavedType">-</strong> | Chave: <strong id="ownerPixSavedKey">-</strong></p>
+                        </div>
+
+                        <form onsubmit="saveOwnerPix(event)">
+                            <div class="form-field" style="margin-bottom:1.2rem">
+                                <label style="font-weight:600;margin-bottom:6px;display:block;font-size:0.9rem">Tipo de chave</label>
+                                <select id="ownerPixType" class="custom-select" style="width:100%" required>
+                                    <option value="">Selecione o tipo</option>
+                                    <option value="cpf">CPF</option>
+                                    <option value="email">Email</option>
+                                    <option value="telefone">Telefone</option>
+                                    <option value="aleatoria">Chave aleatoria</option>
+                                </select>
+                            </div>
+                            <div class="form-field" style="margin-bottom:1.2rem">
+                                <label style="font-weight:600;margin-bottom:6px;display:block;font-size:0.9rem">Chave PIX</label>
+                                <input type="text" id="ownerPixKey" placeholder="Digite sua chave PIX" required maxlength="100" style="padding:12px 16px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:0.95rem">
+                            </div>
+                            <div id="ownerPixFeedback" class="form-feedback"></div>
+                            <button type="submit" class="btn btn-accent" id="ownerPixBtn" style="width:100%;padding:12px;font-size:1rem;font-weight:600">Salvar Chave PIX</button>
+                        </form>
+
+                        <div style="margin-top:1.5rem;padding:1rem;background:var(--bg-secondary);border-radius:10px">
+                            <p style="color:var(--text-muted);font-size:0.85rem;margin:0;line-height:1.5">
+                                <strong>Como funciona:</strong> Quando o inquilino pagar o aluguel via PIX pelo MoraJunto, o valor integral do aluguel sera transferido para sua chave PIX cadastrada. A taxa de 8% e cobrada separadamente do inquilino.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3017,9 +3133,10 @@
 
     // Owner panel
     function switchOwnerTab(tab, btn) {
-        var tabMap = {properties:0, add:1, rentals:2};
-        ['properties','add','rentals'].forEach(function(t){
+        var tabMap = {properties:0, add:1, rentals:2, pix:3};
+        ['properties','add','rentals','pix'].forEach(function(t){
             var el = document.getElementById('ownerTab-'+t);
+            if(!el) return;
             if(t===tab){el.classList.remove('hidden');el.style.display='';}
             else{el.classList.add('hidden');el.style.display='none';}
         });
@@ -3031,7 +3148,108 @@
         } else if (tabs[tabMap[tab]] !== undefined) {
             tabs[tabMap[tab]].classList.add('active');
         }
+        // Carregar PIX ao abrir aba
+        if (tab === 'pix') loadOwnerPix();
     }
+    // ===== OWNER PIX =====
+    async function loadOwnerPix() {
+        if (!currentToken) return;
+        try {
+            var res = await fetch(API + '/owner/pix', { headers: { 'Authorization': 'Bearer ' + currentToken }});
+            var data = await res.json();
+            if (res.ok && data.pixKey) {
+                var saved = document.getElementById('ownerPixSaved');
+                if (saved) {
+                    saved.classList.remove('hidden');
+                    document.getElementById('ownerPixSavedType').textContent = data.pixKeyType.toUpperCase();
+                    var key = data.pixKey;
+                    document.getElementById('ownerPixSavedKey').textContent = key.length > 8 ? key.substring(0, 4) + '****' + key.slice(-4) : key;
+                }
+                document.getElementById('ownerPixType').value = data.pixKeyType;
+                document.getElementById('ownerPixKey').value = data.pixKey;
+            }
+        } catch(e) {}
+    }
+
+    async function saveOwnerPix(e) {
+        e.preventDefault();
+        var fb = document.getElementById('ownerPixFeedback');
+        var btn = document.getElementById('ownerPixBtn');
+        var pixKey = document.getElementById('ownerPixKey').value.trim();
+        var pixKeyType = document.getElementById('ownerPixType').value;
+        if (!pixKey || !pixKeyType) { fb.textContent = 'Preencha o tipo e a chave PIX'; fb.className = 'form-feedback error'; return; }
+        btn.disabled = true; btn.textContent = 'Salvando...';
+        fb.textContent = ''; fb.className = 'form-feedback';
+        try {
+            var res = await fetch(API + '/owner/pix', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pixKey, pixKeyType })
+            });
+            var data = await res.json();
+            if (res.ok) {
+                fb.textContent = 'Chave PIX salva com sucesso!';
+                fb.className = 'form-feedback success';
+                loadOwnerPix();
+            } else {
+                fb.textContent = data.error || 'Erro ao salvar';
+                fb.className = 'form-feedback error';
+            }
+        } catch(e) {
+            fb.textContent = 'Erro de conexao';
+            fb.className = 'form-feedback error';
+        }
+        btn.disabled = false; btn.textContent = 'Salvar Chave PIX';
+    }
+
+    // ===== REFERRAL PIX =====
+    async function loadReferralPix() {
+        if (!currentToken) return;
+        try {
+            var res = await fetch(API + '/referrals/pix', { headers: { 'Authorization': 'Bearer ' + currentToken }});
+            var data = await res.json();
+            if (res.ok && data.pixKey) {
+                var saved = document.getElementById('refPixSaved');
+                if (saved) {
+                    saved.classList.remove('hidden');
+                    var key = data.pixKey;
+                    document.getElementById('refPixSavedKey').textContent = data.pixKeyType.toUpperCase() + ': ' + (key.length > 8 ? key.substring(0, 4) + '****' + key.slice(-4) : key);
+                }
+                var typeEl = document.getElementById('refPixType');
+                var keyEl = document.getElementById('refPixKey');
+                if (typeEl) typeEl.value = data.pixKeyType;
+                if (keyEl) keyEl.value = data.pixKey;
+            }
+        } catch(e) {}
+    }
+
+    async function saveReferralPix() {
+        var fb = document.getElementById('refPixFeedback');
+        var pixKey = document.getElementById('refPixKey').value.trim();
+        var pixKeyType = document.getElementById('refPixType').value;
+        if (!pixKey || !pixKeyType) { fb.textContent = 'Selecione o tipo e digite a chave PIX'; fb.className = 'form-feedback error'; return; }
+        fb.textContent = ''; fb.className = 'form-feedback';
+        try {
+            var res = await fetch(API + '/referrals/pix', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pixKey, pixKeyType })
+            });
+            var data = await res.json();
+            if (res.ok) {
+                fb.textContent = 'PIX salvo com sucesso!';
+                fb.className = 'form-feedback success';
+                loadReferralPix();
+            } else {
+                fb.textContent = data.error || 'Erro ao salvar';
+                fb.className = 'form-feedback error';
+            }
+        } catch(e) {
+            fb.textContent = 'Erro de conexao';
+            fb.className = 'form-feedback error';
+        }
+    }
+
     async function loadOwnerPanel() {
         if (!currentToken) return;
         try {
@@ -3731,8 +3949,9 @@
         if(!v){s.classList.add('hidden');return;}
         s.classList.remove('hidden');
         var hasUpper=/[A-Z]/.test(v);var hasLower=/[a-z]/.test(v);var hasNum=/\d/.test(v);var hasLen=v.length>=8;
+        var hasSpecial=/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(v);
         var checks=[];
-        if(!hasLen)checks.push('8+ caracteres');if(!hasUpper)checks.push('1 maiúscula');if(!hasLower)checks.push('1 minúscula');if(!hasNum)checks.push('1 número');
+        if(!hasLen)checks.push('8+ caracteres');if(!hasUpper)checks.push('1 maiúscula');if(!hasLower)checks.push('1 minúscula');if(!hasNum)checks.push('1 número');if(!hasSpecial)checks.push('1 especial (!@#$...)');
         if(checks.length===0){s.innerHTML='<span class="pw-strong">✓ Senha forte</span>';}
         else{s.innerHTML='<span class="pw-weak">Falta: '+checks.join(', ')+'</span>';}
     }
@@ -3743,6 +3962,20 @@
         else if(v.length>6)v=v.replace(/(\d{3})(\d{3})(\d{1,3})/,'$1.$2.$3');
         else if(v.length>3)v=v.replace(/(\d{3})(\d{1,3})/,'$1.$2');
         el.value=v;
+    }
+    function validateCPF(cpf){
+        cpf=cpf.replace(/\D/g,'');
+        if(cpf.length!==11)return false;
+        if(/^(\d)\1{10}$/.test(cpf))return false;
+        var sum=0;
+        for(var i=0;i<9;i++)sum+=parseInt(cpf.charAt(i))*(10-i);
+        var d1=11-(sum%11);if(d1>=10)d1=0;
+        if(parseInt(cpf.charAt(9))!==d1)return false;
+        sum=0;
+        for(var i=0;i<10;i++)sum+=parseInt(cpf.charAt(i))*(11-i);
+        var d2=11-(sum%11);if(d2>=10)d2=0;
+        if(parseInt(cpf.charAt(10))!==d2)return false;
+        return true;
     }
     async function submitOwnerLead(e) {
         e.preventDefault();
@@ -3936,13 +4169,45 @@
                             </div>
                             <div class="form-row">
                                 <div class="form-field">
-                                    <label>Fotos (opcional, URLs uma por linha)</label>
-                                    <textarea id="refPhotos" placeholder="https://..." rows="2"></textarea>
+                                    <label>Fotos do imovel (opcional, ate 5 fotos)</label>
+                                    <div class="ref-photo-upload" id="refPhotoUpload" onclick="document.getElementById('refPhotosInput').click()">
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-muted)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                                        <span style="color:var(--text-muted);font-size:0.85rem">Clique para adicionar fotos</span>
+                                        <span style="color:var(--text-muted);font-size:0.75rem">JPG, PNG ou WebP (max 5MB cada)</span>
+                                    </div>
+                                    <input type="file" id="refPhotosInput" accept="image/jpeg,image/png,image/webp" multiple style="display:none" onchange="previewRefPhotos(this)">
+                                    <div class="ref-photo-preview" id="refPhotoPreview"></div>
                                 </div>
                             </div>
                             <div class="form-feedback" id="referralFeedback"></div>
                             <button type="submit" class="btn btn-accent" style="width:100%;margin-top:0.5rem">Enviar indicacao</button>
                         </form>
+
+                        <!-- PIX para receber recompensa -->
+                        <div style="margin-top:1.5rem;padding:1.2rem;background:var(--bg-secondary);border-radius:12px;border:1px solid var(--border-color)">
+                            <h4 style="margin:0 0 0.5rem;display:flex;align-items:center;gap:0.5rem">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                                PIX para receber recompensa
+                            </h4>
+                            <p style="color:var(--text-muted);font-size:0.85rem;margin:0 0 1rem">Cadastre seu PIX para receber quando o imovel indicado for alugado.</p>
+
+                            <div id="refPixSaved" class="hidden" style="background:rgba(16,185,129,0.1);border-radius:8px;padding:0.8rem;margin-bottom:1rem">
+                                <span style="color:#10b981;font-size:0.85rem">PIX cadastrado: <strong id="refPixSavedKey">-</strong></span>
+                            </div>
+
+                            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:stretch">
+                                <select id="refPixType" class="custom-select" style="flex:0 0 auto;min-width:140px;padding:10px 36px 10px 14px">
+                                    <option value="">Tipo</option>
+                                    <option value="cpf">CPF</option>
+                                    <option value="email">Email</option>
+                                    <option value="telefone">Telefone</option>
+                                    <option value="aleatoria">Chave aleatoria</option>
+                                </select>
+                                <input type="text" id="refPixKey" placeholder="Sua chave PIX" maxlength="100" style="flex:1;min-width:150px;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:0.95rem;background:var(--surface);color:var(--text)">
+                                <button type="button" class="btn btn-accent" style="padding:10px 20px;font-weight:600" onclick="saveReferralPix()">Salvar</button>
+                            </div>
+                            <div id="refPixFeedback" class="form-feedback" style="margin-top:0.5rem"></div>
+                        </div>
                     </div>
 
                     <!-- My Referrals -->
@@ -3982,12 +4247,22 @@
         <span>Ganhe R$150</span>
     </button>
 
-    <!-- Top Banner -->
-    <div class="referral-top-banner" id="referralTopBanner">
-        <div class="container" style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap">
-            <span>Indique imoveis e ganhe ate <strong>R$150</strong> por indicacao!</span>
-            <button class="btn btn-sm" style="background:#fff;color:#4338CA;font-weight:600;padding:4px 14px;font-size:0.8rem" onclick="showPage('referral')">Indicar agora</button>
-            <button style="background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:1.2rem;margin-left:8px" onclick="document.getElementById('referralTopBanner').style.display='none'">&times;</button>
+    <!-- Exit Intent Popup -->
+    <div class="ref-popup-overlay" id="refPopupOverlay" style="display:none">
+        <div class="ref-popup">
+            <button class="ref-popup-close" onclick="closeRefPopup()">&times;</button>
+            <div class="ref-popup-emoji">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="1.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            </div>
+            <h3 style="margin:0 0 0.3rem;font-size:1.3rem">Espera! Sabia que voce pode<br><span style="color:#10b981">ganhar dinheiro</span> aqui?</h3>
+            <p style="color:var(--text-muted);margin:0 0 1rem;font-size:0.95rem">Indique imoveis disponiveis para alugar e receba ate <strong>R$150 via PIX</strong> por cada um alugado.</p>
+            <div class="ref-popup-stats">
+                <div><strong style="font-size:1.5rem;color:var(--accent)">R$150</strong><br><span style="font-size:0.8rem;color:var(--text-muted)">por imovel</span></div>
+                <div><strong style="font-size:1.5rem;color:#10b981">37</strong><br><span style="font-size:0.8rem;color:var(--text-muted)">indicacoes/mes</span></div>
+                <div><strong style="font-size:1.5rem;color:#f59e0b">PIX</strong><br><span style="font-size:0.8rem;color:var(--text-muted)">pagamento rapido</span></div>
+            </div>
+            <button class="btn btn-accent btn-lg" style="width:100%;margin-top:1rem" onclick="closeRefPopup();showPage('referral')">Quero indicar e ganhar!</button>
+            <p style="color:var(--text-muted);font-size:0.8rem;margin:0.8rem 0 0;cursor:pointer" onclick="closeRefPopup()">Agora nao, obrigado</p>
         </div>
     </div>
 
@@ -4016,9 +4291,9 @@
         </button>
     </nav>
 
-    <script src="script.js?v=5003"></script>
-    <script src="roommate.js?v=5003"></script>
-    <script src="republicas.js?v=5003"></script>
+    <script src="script.js?v=v1"></script>
+    <script src="roommate.js?v=v1"></script>
+    <script src="republicas.js?v=v1"></script>
     <script>
     // Service Worker — force update and clear old caches
     if ('serviceWorker' in navigator) {
@@ -4027,7 +4302,7 @@
         });
         caches.keys().then(function(keys) {
             keys.forEach(function(k) {
-                if (k !== 'morajunto-v3') caches.delete(k);
+                if (k !== 'morajunto-v1') caches.delete(k);
             });
         });
         navigator.serviceWorker.register('/sw.js').catch(function(){});
@@ -4044,7 +4319,12 @@
             });
         },{threshold:0.1,rootMargin:'0px 0px -40px 0px'});
         document.querySelectorAll('.reveal,.reveal-left,.reveal-right,.reveal-scale').forEach(function(el){
-            observer.observe(el);
+            var rect = el.getBoundingClientRect();
+            if(rect.top < window.innerHeight && rect.bottom > 0){
+                el.classList.add('visible');
+            } else {
+                observer.observe(el);
+            }
         });
         // Also observe dynamically: re-run on page change
         var origShow = window.showPage;

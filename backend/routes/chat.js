@@ -96,12 +96,19 @@ router.post('/conversations', async (req, res) => {
             return res.status(400).json({ error: 'ID do imóvel inválido' });
         }
 
-        // Match-only chat: require mutual match OR property context
+        // Match-only chat: require mutual match OR valid property context
         if (!propertyId) {
             var sender = await User.findById(req.user.userId).select('matches');
             var isMutualMatch = sender && sender.matches && sender.matches.some(function(id) { return id.toString() === recipientId; });
             if (!isMutualMatch) {
                 return res.status(403).json({ error: 'Voce so pode conversar com matches mutuos ou sobre um imovel especifico.' });
+            }
+        } else {
+            // Validar que o imóvel existe antes de permitir chat
+            var Property = require('mongoose').model('Property');
+            var propertyExists = await Property.findById(propertyId).select('_id');
+            if (!propertyExists) {
+                return res.status(404).json({ error: 'Imóvel não encontrado. Não é possível iniciar conversa.' });
             }
         }
 

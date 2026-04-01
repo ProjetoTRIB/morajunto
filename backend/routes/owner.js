@@ -53,6 +53,48 @@ router.use(function(req, res, next) {
     next();
 });
 
+// GET /api/owner/pix — retorna chave PIX do proprietário
+router.get('/pix', async (req, res) => {
+    try {
+        var user = await User.findById(req.user.userId).select('pixKey pixKeyType');
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+        res.json({ pixKey: user.pixKey || '', pixKeyType: user.pixKeyType || '' });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao buscar chave PIX' });
+    }
+});
+
+// POST /api/owner/pix — salva chave PIX do proprietário
+router.post('/pix', async (req, res) => {
+    try {
+        var { pixKey, pixKeyType } = req.body;
+        if (!pixKey || !pixKeyType) {
+            return res.status(400).json({ error: 'Chave PIX e tipo são obrigatórios' });
+        }
+        pixKey = pixKey.trim().substring(0, 100);
+        var validTypes = ['cpf', 'email', 'telefone', 'aleatoria'];
+        if (!validTypes.includes(pixKeyType)) {
+            return res.status(400).json({ error: 'Tipo de chave inválido' });
+        }
+        // Validação por tipo
+        if (pixKeyType === 'cpf' && !/^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(pixKey)) {
+            return res.status(400).json({ error: 'CPF inválido. Use o formato 000.000.000-00' });
+        }
+        if (pixKeyType === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixKey)) {
+            return res.status(400).json({ error: 'Email inválido' });
+        }
+        if (pixKeyType === 'telefone' && !/^\+?55?\s?\(?\d{2}\)?\s?\d{4,5}-?\d{4}$/.test(pixKey.replace(/\s/g, ''))) {
+            return res.status(400).json({ error: 'Telefone inválido. Use (XX) XXXXX-XXXX' });
+        }
+
+        var user = await User.findByIdAndUpdate(req.user.userId, { pixKey, pixKeyType }, { new: true });
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+        res.json({ message: 'Chave PIX salva com sucesso', pixKey: user.pixKey, pixKeyType: user.pixKeyType });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao salvar chave PIX' });
+    }
+});
+
 // GET /api/owner/stats
 router.get('/stats', async (req, res) => {
     try {

@@ -43,11 +43,11 @@ router.get('/', async (req, res) => {
         res.json({
             republicas,
             total,
-            page: Number(page),
-            totalPages: Math.ceil(total / Number(limit))
+            page: safePage,
+            totalPages: Math.ceil(total / safeLimit)
         });
     } catch (e) {
-        res.status(500).json({ error: 'Erro ao buscar repúblicas: ' });
+        res.status(500).json({ error: 'Erro ao buscar repúblicas' });
     }
 });
 
@@ -60,7 +60,7 @@ router.get('/:id', validateId('id'), async (req, res) => {
         if (!republica) return res.status(404).json({ error: 'República não encontrada' });
         res.json({ republica });
     } catch (e) {
-        res.status(500).json({ error: 'Erro ao buscar república: ' });
+        res.status(500).json({ error: 'Erro ao buscar república' });
     }
 });
 
@@ -117,7 +117,7 @@ router.post('/', authMiddleware, async (req, res) => {
 
         res.status(201).json({ republica });
     } catch (e) {
-        res.status(500).json({ error: 'Erro ao criar república: ' });
+        res.status(500).json({ error: 'Erro ao criar república' });
     }
 });
 
@@ -144,7 +144,7 @@ router.put('/:id', validateId('id'), authMiddleware, async (req, res) => {
         await republica.save();
         res.json({ republica });
     } catch (e) {
-        res.status(500).json({ error: 'Erro ao atualizar república: ' });
+        res.status(500).json({ error: 'Erro ao atualizar república' });
     }
 });
 
@@ -165,7 +165,7 @@ router.delete('/:id', validateId('id'), authMiddleware, async (req, res) => {
         await Republica.findByIdAndDelete(req.params.id);
         res.json({ message: 'República removida com sucesso' });
     } catch (e) {
-        res.status(500).json({ error: 'Erro ao deletar república: ' });
+        res.status(500).json({ error: 'Erro ao deletar república' });
     }
 });
 
@@ -203,7 +203,7 @@ router.post('/:id/apply', validateId('id'), authMiddleware, async (req, res) => 
         await republica.save();
         res.json({ message: 'Candidatura enviada com sucesso!' });
     } catch (e) {
-        res.status(500).json({ error: 'Erro ao se candidatar: ' });
+        res.status(500).json({ error: 'Erro ao se candidatar' });
     }
 });
 
@@ -220,7 +220,7 @@ router.get('/:id/applicants', validateId('id'), authMiddleware, async (req, res)
 
         res.json({ applicants: republica.applicants });
     } catch (e) {
-        res.status(500).json({ error: 'Erro ao buscar candidatos: ' });
+        res.status(500).json({ error: 'Erro ao buscar candidatos' });
     }
 });
 
@@ -245,29 +245,39 @@ router.post('/:id/approve/:userId', validateId('id'), validateId('userId'), auth
             return res.status(400).json({ error: 'Não há vagas disponíveis' });
         }
 
-        // Remove from applicants
-        republica.applicants.splice(applicantIndex, 1);
+        // Atomic update to prevent race condition on availableSpots
+        const updated = await Republica.findOneAndUpdate(
+            {
+                _id: req.params.id,
+                availableSpots: { $gt: 0 },
+                'applicants.user': req.params.userId
+            },
+            {
+                $inc: { availableSpots: -1 },
+                $pull: { applicants: { user: req.params.userId } },
+                $addToSet: { members: req.params.userId }
+            },
+            { new: true }
+        );
 
-        // Add to members
-        if (!republica.members.some(m => m.toString() === req.params.userId)) {
-            republica.members.push(req.params.userId);
+        if (!updated) {
+            return res.status(400).json({ error: 'Não foi possível aprovar — sem vagas ou candidato não encontrado' });
         }
 
-        // Update available spots
-        republica.availableSpots -= 1;
-        if (republica.availableSpots <= 0) {
-            republica.status = 'full';
+        // Set status to full if no spots left
+        if (updated.availableSpots <= 0) {
+            updated.status = 'full';
         }
 
         // Recalculate split price
-        if (republica.price > 0 && republica.members.length > 0) {
-            republica.splitPrice = Math.round(republica.price / republica.members.length);
+        if (updated.price > 0 && updated.members.length > 0) {
+            updated.splitPrice = Math.round(updated.price / updated.members.length);
         }
 
-        await republica.save();
-        res.json({ message: 'Candidato aprovado!', republica });
+        await updated.save();
+        res.json({ message: 'Candidato aprovado!', republica: updated });
     } catch (e) {
-        res.status(500).json({ error: 'Erro ao aprovar candidato: ' });
+        res.status(500).json({ error: 'Erro ao aprovar candidato' });
     }
 });
 
@@ -293,7 +303,7 @@ router.post('/:id/reject/:userId', validateId('id'), validateId('userId'), authM
 
         res.json({ message: 'Candidato rejeitado' });
     } catch (e) {
-        res.status(500).json({ error: 'Erro ao rejeitar candidato: ' });
+        res.status(500).json({ error: 'Erro ao rejeitar candidato' });
     }
 });
 
@@ -329,7 +339,7 @@ router.post('/:id/leave', validateId('id'), authMiddleware, async (req, res) => 
         await republica.save();
         res.json({ message: 'Você saiu da república' });
     } catch (e) {
-        res.status(500).json({ error: 'Erro ao sair da república: ' });
+        res.status(500).json({ error: 'Erro ao sair da república' });
     }
 });
 

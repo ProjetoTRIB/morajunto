@@ -14,8 +14,24 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const connectDB = require('./backend/config/db');
 
+const crypto = require('crypto');
+
+// Generate build hash from frontend files to auto-bust cache on any change
+var BUILD_VERSION = (function() {
+    try {
+        var files = ['index.html', 'style.css', 'script.js', 'roommate.js', 'republicas.js'];
+        var hash = crypto.createHash('md5');
+        files.forEach(function(f) {
+            try { hash.update(require('fs').readFileSync(path.join(__dirname, f))); } catch(e) {}
+        });
+        return hash.digest('hex').substring(0, 8);
+    } catch(e) { return Date.now().toString(36); }
+})();
+console.log('Build version:', BUILD_VERSION);
+
 const app = express();
 app.set('trust proxy', 1);
+app.set('buildVersion', BUILD_VERSION);
 const server = http.createServer(app);
 
 const ALLOWED_ORIGINS = process.env.CORS_ORIGINS
@@ -209,7 +225,15 @@ var chatLimiter = rateLimit({
 app.use('/api/chat', chatLimiter);
 
 // Serve PWA files before blocking middleware
-app.get('/sw.js', (req, res) => res.sendFile(path.join(__dirname, 'sw.js')));
+app.get('/sw.js', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    var v = app.get('buildVersion');
+    var swContent = require('fs').readFileSync(path.join(__dirname, 'sw.js'), 'utf-8');
+    // Inject dynamic cache name and asset versions
+    swContent = swContent.replace(/__BUILD_VERSION__/g, v);
+    res.send(swContent);
+});
 app.get('/manifest.json', (req, res) => res.sendFile(path.join(__dirname, 'manifest.json')));
 
 // Block sensitive files and backend source code
@@ -224,34 +248,34 @@ app.use(function(req, res, next) {
     next();
 });
 
-// Serve uploaded files — verification docs require admin auth
-app.use('/uploads/verification', function(req, res, next) {
-    var authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: 'Acesso negado' });
-    try {
-        var token = authHeader.split(' ')[1];
-        var decoded = require('jsonwebtoken').verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
-        if (decoded.role !== 'admin') return res.status(403).json({ error: 'Apenas admin' });
-        next();
-    } catch(e) { return res.status(401).json({ error: 'Token inválido' }); }
+// Images are now served directly from Cloudinary CDN (no local uploads)
+
+// Serve index.html with dynamic build version injected
+app.get('/', function(req, res) {
+    var v = app.get('buildVersion');
+    var html = require('fs').readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+    html = html.replace(/__BUILD_VERSION__/g, v);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.send(html);
 });
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Arquivos estáticos — only serve frontend files, not source code
 app.use(express.static(path.join(__dirname), {
     dotfiles: 'deny',
-    index: 'index.html',
+    index: false,
     setHeaders: (res, filePath) => {
-        if (filePath.endsWith('.html')) res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        else if (filePath.endsWith('.css')) res.setHeader('Content-Type', 'text/css; charset=utf-8');
-        else if (filePath.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+        if (filePath.endsWith('.html')) {
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            res.setHeader('Cache-Control', 'no-cache');
+        } else if (filePath.endsWith('.css') || filePath.endsWith('.js')) {
+            res.setHeader('Content-Type', filePath.endsWith('.css') ? 'text/css; charset=utf-8' : 'application/javascript; charset=utf-8');
+            res.setHeader('Cache-Control', 'no-cache');
+        }
     }
 }));
 
 
-// Ensure upload directories exist
-var fs = require('fs');
-fs.mkdirSync('./uploads/verification/', { recursive: true });
 
 // Rotas da API
 app.use('/api/auth', require('./backend/routes/auth'));
@@ -324,7 +348,12 @@ app.get('/{*splat}', (req, res) => {
     if (req.path.includes('..') || req.path.includes('%2e') || req.path.includes('%2E')) {
         return res.status(400).json({ error: 'Requisição inválida' });
     }
-    res.sendFile(path.join(__dirname, 'index.html'));
+    var v = app.get('buildVersion');
+    var html = require('fs').readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+    html = html.replace(/__BUILD_VERSION__/g, v);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.send(html);
 });
 
 // Global error handler — never expose internal errors to client

@@ -249,7 +249,8 @@ router.post('/like/:userId', validateId('userId'), async (req, res) => {
         const other = await User.findById(req.params.userId);
         if (!me || !other) return res.status(404).json({ error: 'Usuário não encontrado' });
 
-        if (!me.likedProfiles.includes(other._id)) {
+        if (!(me.likedProfiles || []).includes(other._id)) {
+            if (!me.likedProfiles) me.likedProfiles = [];
             me.likedProfiles.push(other._id);
             await me.save();
         }
@@ -280,7 +281,8 @@ router.post('/dislike/:userId', validateId('userId'), async (req, res) => {
         const me = await User.findById(req.user.userId);
         if (!me) return res.status(404).json({ error: 'Usuário não encontrado' });
 
-        if (!me.dislikedProfiles.includes(req.params.userId)) {
+        if (!(me.dislikedProfiles || []).includes(req.params.userId)) {
+            if (!me.dislikedProfiles) me.dislikedProfiles = [];
             me.dislikedProfiles.push(req.params.userId);
             await me.save();
         }

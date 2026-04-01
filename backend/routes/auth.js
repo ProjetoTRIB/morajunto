@@ -244,16 +244,38 @@ router.get('/me', authMiddleware, async (req, res) => {
     }
 });
 
+// POST /api/auth/change-password — trocar senha (autenticado)
+router.post('/change-password', authMiddleware, async (req, res) => {
+    try {
+        var { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: 'Senha atual e nova senha são obrigatórias' });
+        }
+        var user = await User.findById(req.user.userId);
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+        var isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) return res.status(401).json({ error: 'Senha atual incorreta' });
+
+        if (!isStrongPassword(newPassword)) {
+            return res.status(400).json({ error: 'Nova senha deve ter 8+ caracteres, 1 maiúscula, 1 minúscula, 1 número e 1 caractere especial' });
+        }
+
+        user.password = await bcrypt.hash(newPassword, 10);
+        await user.save();
+        res.json({ message: 'Senha alterada com sucesso' });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao alterar senha' });
+    }
+});
+
 // POST /api/auth/admin/seed — cria admin (apenas se nenhum admin existe, requer ADMIN_SEED_KEY)
 router.post('/admin/seed', async (req, res) => {
     try {
-        // Require seed key in production
+        // Require seed key ALWAYS (not just production)
         var seedKey = process.env.ADMIN_SEED_KEY;
-        if (seedKey && req.body.seedKey !== seedKey) {
-            return res.status(401).json({ error: 'Chave de seed inválida' });
-        }
-        if (process.env.NODE_ENV === 'production' && !seedKey) {
-            return res.status(403).json({ error: 'Seed desabilitado em produção. Configure ADMIN_SEED_KEY.' });
+        if (!seedKey || !req.body.seedKey || req.body.seedKey !== seedKey) {
+            return res.status(401).json({ error: 'Chave de seed inválida ou não configurada' });
         }
 
         // Block if any admin already exists

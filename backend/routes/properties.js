@@ -154,7 +154,15 @@ router.get('/:id', validateId('id'), async (req, res) => {
 // POST /api/properties — criar imóvel (apenas imobiliária/admin)
 router.post('/', authMiddleware, agencyMiddleware, async (req, res) => {
     try {
-        var data = req.body;
+        // Whitelist de campos permitidos (previne mass assignment)
+        var allowed = ['title', 'description', 'price', 'address', 'neighborhood', 'city',
+            'type', 'transaction', 'bedrooms', 'bathrooms', 'area', 'furnished', 'petFriendly',
+            'photos', 'features', 'availableFrom', 'maxRoommates', 'genderPreference',
+            'nearUniversity', 'contactPhone', 'contactWhatsapp'];
+        var data = {};
+        allowed.forEach(function(field) {
+            if (req.body[field] !== undefined) data[field] = req.body[field];
+        });
         data.agency = req.user.userId;
 
         var property = await Property.create(data);

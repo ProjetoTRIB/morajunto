@@ -1,11 +1,18 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const PropertyReferral = require('../models/PropertyReferral');
 const authMiddleware = require('../middleware/auth');
 const { validateId } = require('../middleware/validateId');
+const { createStorage } = require('../config/cloudinary');
 
-// POST /api/referrals — any logged-in user can submit
-router.post('/', authMiddleware, async (req, res) => {
+var referralUpload = multer({
+    storage: createStorage('morajunto/referrals'),
+    limits: { fileSize: 5 * 1024 * 1024 }
+});
+
+// POST /api/referrals — any logged-in user can submit (with image upload)
+router.post('/', authMiddleware, referralUpload.array('photos', 5), async (req, res) => {
     try {
         var ownerName = (req.body.ownerName || '').trim();
         var ownerPhone = (req.body.ownerPhone || '').trim();
@@ -13,7 +20,12 @@ router.post('/', authMiddleware, async (req, res) => {
         var address = (req.body.address || '').trim();
         var neighborhood = (req.body.neighborhood || '').trim();
         var description = (req.body.description || '').trim();
-        var photos = Array.isArray(req.body.photos) ? req.body.photos.filter(function(p) { return typeof p === 'string' && p.trim(); }).slice(0, 5) : [];
+
+        // Collect photos from uploaded files
+        var photos = [];
+        if (req.files && req.files.length > 0) {
+            photos = req.files.map(function(f) { return f.path; });
+        }
 
         if (!ownerName || ownerName.length < 2) return res.status(400).json({ error: 'Nome do proprietario obrigatorio (min 2 caracteres)' });
         if (!ownerPhone || ownerPhone.length < 8) return res.status(400).json({ error: 'Telefone do proprietario obrigatorio (min 8 digitos)' });
@@ -54,6 +66,40 @@ router.get('/my', authMiddleware, async (req, res) => {
         res.json({ referrals: referrals });
     } catch (e) {
         res.status(500).json({ error: 'Erro ao buscar indicacoes' });
+    }
+});
+
+// GET /api/referrals/pix — retorna chave PIX do indicador
+router.get('/pix', authMiddleware, async (req, res) => {
+    try {
+        var User = require('../models/User');
+        var user = await User.findById(req.user.userId).select('pixKey pixKeyType');
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+        res.json({ pixKey: user.pixKey || '', pixKeyType: user.pixKeyType || '' });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao buscar chave PIX' });
+    }
+});
+
+// POST /api/referrals/pix — salva chave PIX do indicador
+router.post('/pix', authMiddleware, async (req, res) => {
+    try {
+        var User = require('../models/User');
+        var { pixKey, pixKeyType } = req.body;
+        if (!pixKey || !pixKeyType) {
+            return res.status(400).json({ error: 'Chave PIX e tipo são obrigatórios' });
+        }
+        pixKey = pixKey.trim().substring(0, 100);
+        var validTypes = ['cpf', 'email', 'telefone', 'aleatoria'];
+        if (!validTypes.includes(pixKeyType)) {
+            return res.status(400).json({ error: 'Tipo de chave inválido' });
+        }
+
+        var user = await User.findByIdAndUpdate(req.user.userId, { pixKey, pixKeyType }, { new: true });
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+        res.json({ message: 'Chave PIX salva com sucesso', pixKey: user.pixKey, pixKeyType: user.pixKeyType });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao salvar chave PIX' });
     }
 });
 

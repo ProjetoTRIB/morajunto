@@ -67,6 +67,8 @@ document.addEventListener('DOMContentLoaded', () => {
     loadStats();
     animateStatsOnScroll();
     handleFacebookCallback();
+    initExitIntentPopup();
+    animateRefCounter();
 });
 
 // ===== FACEBOOK OAUTH CALLBACK HANDLER =====
@@ -168,6 +170,7 @@ function showPage(page, scrollTo) {
         initChat();
     } else if (page === 'referral') {
         loadMyReferrals();
+        if (typeof loadReferralPix === 'function') loadReferralPix();
     }
 
     closeMobileMenu();
@@ -197,9 +200,18 @@ function checkAuth() {
         updateNavAuth(true);
     })
     .catch(() => {
+        var hadToken = !!currentToken;
         currentToken = null;
         localStorage.removeItem('alugaja_token');
         updateNavAuth(false);
+        if (hadToken) {
+            var toast = document.createElement('div');
+            toast.className = 'session-expired-toast';
+            toast.textContent = 'Sua sessão expirou. Faça login novamente.';
+            toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#e74c3c;color:#fff;padding:12px 24px;border-radius:8px;z-index:10000;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+            document.body.appendChild(toast);
+            setTimeout(function(){ toast.remove(); }, 5000);
+        }
     });
 }
 
@@ -371,8 +383,12 @@ async function login(e) {
             var msg = data.message || data.error || 'Email ou senha incorretos';
             showFormFeedback('loginFeedback', msg, 'error');
             var attInfo = document.getElementById('loginAttemptsInfo');
-            if (attInfo && _loginAttempts >= 3) {
-                attInfo.textContent = 'Tentativa ' + _loginAttempts + '/10 — apos 10 sua conta sera bloqueada temporariamente';
+            if (attInfo && _loginAttempts >= 2) {
+                if (_loginAttempts >= 5) {
+                    attInfo.textContent = 'Conta bloqueada temporariamente (15 min). Tente novamente mais tarde.';
+                } else {
+                    attInfo.textContent = 'Tentativa ' + _loginAttempts + '/5 — após 5 sua conta será bloqueada por 15 minutos';
+                }
             }
             if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
             return;
@@ -395,7 +411,7 @@ async function login(e) {
         }
     } catch (err) {
         if (btn) { btn.disabled = false; btn.textContent = 'Entrar'; }
-        showFormFeedback('loginFeedback', 'Erro de conexao. Tente novamente.', 'error');
+        showFormFeedback('loginFeedback', 'Erro de conexão. Tente novamente.', 'error');
     }
 }
 
@@ -430,6 +446,25 @@ async function register(e) {
         gender: document.getElementById('regGender') ? document.getElementById('regGender').value : '',
         profilePhoto: document.getElementById('regPhoto') ? document.getElementById('regPhoto').value : ''
     };
+
+    // Validar CPF no frontend
+    if (payload.cpf && typeof validateCPF === 'function' && !validateCPF(payload.cpf)) {
+        showFormFeedback('registerFeedback', 'CPF inválido. Verifique os números digitados.', 'error');
+        return;
+    }
+
+    // Validar idade 18+
+    if (payload.birthDate) {
+        var birth = new Date(payload.birthDate);
+        var today = new Date();
+        var age = today.getFullYear() - birth.getFullYear();
+        var m = today.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+        if (age < 18) {
+            showFormFeedback('registerFeedback', 'Você precisa ter pelo menos 18 anos para se cadastrar.', 'error');
+            return;
+        }
+    }
 
     if (payload.role === 'agency') {
         payload.phone = document.getElementById('regPhone').value;
@@ -551,7 +586,12 @@ function animateStatsOnScroll() {
     }, { threshold: 0.05 });
 
     document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale').forEach(el => {
-        revealObserver.observe(el);
+        var rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) {
+            el.classList.add('visible');
+        } else {
+            revealObserver.observe(el);
+        }
     });
 }
 
@@ -674,11 +714,20 @@ function toggleFiltersMobile() {
 }
 
 // ===== PROPERTY CARDS RENDERING =====
+var _referralCardHtml = '<div class="property-card referral-card-inline" onclick="showPage(\'referral\')">' +
+    '<div class="property-img" style="background:linear-gradient(135deg,#4338CA,#7C3AED);display:flex;align-items:center;justify-content:center">' +
+    '<div style="text-align:center;color:#fff;padding:20px"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>' +
+    '<p style="font-size:1.8rem;font-weight:800;margin:4px 0">R$150</p></div></div>' +
+    '<div class="property-info" style="text-align:center"><h3 style="color:var(--accent)">Conhece mais imoveis?</h3>' +
+    '<p style="font-size:0.85rem;color:var(--text-muted)">Indique e ganhe dinheiro por cada um alugado</p>' +
+    '<span style="color:#10b981;font-weight:600;font-size:0.85rem">Indicar agora &rarr;</span></div></div>';
+
 function renderPropertyCards(properties, containerId, withActions) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    container.innerHTML = properties.map(p => {
+    container.innerHTML = properties.map((p, idx) => {
+        var inlineAd = (idx > 0 && idx % 4 === 0) ? _referralCardHtml : '';
         const img = (p.images && p.images.length > 0) ? p.images[0] : 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&h=400&fit=crop';
         const badgeClass = p.transaction === 'venda' ? 'badge-venda' : 'badge-aluguel';
         const badgeText = p.transaction === 'venda' ? 'Venda' : 'Aluguel';
@@ -687,7 +736,7 @@ function renderPropertyCards(properties, containerId, withActions) {
         var parkingText = (p.parking > 0) ? '<span>' + p.parking + ' vaga' + (p.parking !== 1 ? 's' : '') + '</span>' : '';
         var areaText = p.area ? '<span>' + formatArea(p.area) + '</span>' : '';
 
-        return `
+        var card = `
         <div class="property-card" onclick="showPropertyDetail('${id}')">
             <div class="property-img">
                 <img src="${img}" alt="${escapeHtml(p.title || 'Imóvel')}" loading="lazy" decoding="async">
@@ -707,6 +756,7 @@ function renderPropertyCards(properties, containerId, withActions) {
                 </div>
             </div>
         </div>`;
+        return inlineAd + card;
     }).join('');
 }
 
@@ -786,6 +836,10 @@ function renderPropertyDetail(p) {
     mainImg.parentElement.classList.add('gallery-loading');
     mainImg.src = optimizeImg(images[0], 800, 80);
     mainImg.onload = function() {
+        mainImg.style.opacity = '1';
+        mainImg.parentElement.classList.remove('gallery-loading');
+    };
+    mainImg.onerror = function() {
         mainImg.style.opacity = '1';
         mainImg.parentElement.classList.remove('gallery-loading');
     };
@@ -982,43 +1036,6 @@ function calculateTotalCost() {
     const iptu = parseFloat(document.getElementById('costIptu').textContent.replace(/[^\d]/g, '')) || 0;
     const utilities = 350;
     document.getElementById('costTotal').textContent = formatPrice(rent + condo + iptu + utilities);
-}
-
-// ===== LEAD SUBMISSION =====
-async function submitLead(e) {
-    e.preventDefault();
-    if (!currentToken) { showLoginModal(); return; }
-    clearFormFeedback('leadFeedback');
-
-    const propertyId = document.getElementById('leadPropertyId').value;
-    const payload = {
-        name: document.getElementById('leadName').value,
-        email: document.getElementById('leadEmail').value,
-        phone: document.getElementById('leadPhone').value,
-        message: document.getElementById('leadMessage').value
-    };
-
-    try {
-        const headers = { 'Content-Type': 'application/json' };
-        if (currentToken) headers['Authorization'] = 'Bearer ' + currentToken;
-
-        const res = await fetch(API + '/properties/' + propertyId + '/lead', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) {
-            const data = await res.json();
-            showFormFeedback('leadFeedback', data.message || 'Erro ao enviar', 'error');
-            return;
-        }
-
-        showFormFeedback('leadFeedback', 'Interesse enviado com sucesso! A imobiliária entrará em contato.', 'success');
-        document.getElementById('leadForm').reset();
-    } catch {
-        showFormFeedback('leadFeedback', 'Erro de conexão. Tente novamente.', 'error');
-    }
 }
 
 // ===== CONTACT OWNER VIA PLATFORM CHAT =====
@@ -1382,26 +1399,32 @@ async function submitReferral(event) {
         return;
     }
 
-    const payload = {
-        address: document.getElementById('refAddress').value.trim(),
-        neighborhood: document.getElementById('refNeighborhood').value.trim(),
-        ownerName: document.getElementById('refOwnerName').value.trim(),
-        ownerPhone: document.getElementById('refOwnerPhone').value.trim(),
-        ownerEmail: document.getElementById('refOwnerEmail').value.trim(),
-        description: document.getElementById('refDescription').value.trim(),
-        photos: document.getElementById('refPhotos').value.split('\n').map(s => s.trim()).filter(Boolean)
-    };
+    const formData = new FormData();
+    formData.append('address', document.getElementById('refAddress').value.trim());
+    formData.append('neighborhood', document.getElementById('refNeighborhood').value.trim());
+    formData.append('ownerName', document.getElementById('refOwnerName').value.trim());
+    formData.append('ownerPhone', document.getElementById('refOwnerPhone').value.trim());
+    formData.append('ownerEmail', document.getElementById('refOwnerEmail').value.trim());
+    formData.append('description', document.getElementById('refDescription').value.trim());
+
+    var photoInput = document.getElementById('refPhotosInput');
+    if (photoInput && photoInput.files) {
+        for (var i = 0; i < Math.min(photoInput.files.length, 5); i++) {
+            formData.append('photos', photoInput.files[i]);
+        }
+    }
 
     try {
         const res = await fetch(API + '/referrals', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
-            body: JSON.stringify(payload)
+            headers: { 'Authorization': 'Bearer ' + currentToken },
+            body: formData
         });
         const data = await res.json();
         if (res.ok) {
             showFormFeedback('referralFeedback', data.message || 'Indicacao enviada!', 'success');
             document.getElementById('referralForm').reset();
+            document.getElementById('refPhotoPreview').innerHTML = '';
             loadMyReferrals();
         } else {
             showFormFeedback('referralFeedback', data.error || 'Erro ao enviar', 'error');
@@ -1409,6 +1432,77 @@ async function submitReferral(event) {
     } catch {
         showFormFeedback('referralFeedback', 'Erro de conexao', 'error');
     }
+}
+
+function previewRefPhotos(input) {
+    var preview = document.getElementById('refPhotoPreview');
+    preview.innerHTML = '';
+    if (!input.files || input.files.length === 0) return;
+
+    var files = Array.from(input.files).slice(0, 5);
+    files.forEach(function(file, idx) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var div = document.createElement('div');
+            div.className = 'ref-photo-thumb';
+            div.innerHTML = '<img src="' + e.target.result + '" alt="Foto ' + (idx + 1) + '">' +
+                '<button type="button" class="ref-photo-remove" onclick="removeRefPhoto(' + idx + ')">&times;</button>';
+            preview.appendChild(div);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function removeRefPhoto(idx) {
+    var input = document.getElementById('refPhotosInput');
+    var dt = new DataTransfer();
+    var files = Array.from(input.files);
+    files.forEach(function(f, i) { if (i !== idx) dt.items.add(f); });
+    input.files = dt.files;
+    previewRefPhotos(input);
+}
+
+// ===== EXIT INTENT POPUP =====
+function initExitIntentPopup() {
+    // Desktop: mouse leaves viewport
+    document.addEventListener('mouseout', function(e) {
+        if (e.clientY < 5 && !sessionStorage.getItem('refPopupShown')) {
+            showRefPopup();
+        }
+    });
+    // Mobile: after 30 seconds
+    setTimeout(function() {
+        if (!sessionStorage.getItem('refPopupShown')) {
+            showRefPopup();
+        }
+    }, 30000);
+}
+
+function showRefPopup() {
+    var overlay = document.getElementById('refPopupOverlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+        sessionStorage.setItem('refPopupShown', '1');
+    }
+}
+
+function closeRefPopup() {
+    var overlay = document.getElementById('refPopupOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+// ===== ANIMATED REFERRAL COUNTER =====
+function animateRefCounter() {
+    var el = document.getElementById('refCounterNum');
+    if (!el) return;
+    var base = 28 + Math.floor(Math.random() * 15);
+    el.textContent = base;
+    setInterval(function() {
+        if (Math.random() > 0.6) {
+            base += 1;
+            el.textContent = base;
+        }
+    }, 8000);
 }
 
 async function loadMyReferrals() {

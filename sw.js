@@ -1,11 +1,11 @@
-var CACHE_NAME = 'morajunto-v3';
+var CACHE_NAME = 'morajunto-v1';
 var STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/style.css?v=5003',
-  '/script.js?v=5003',
-  '/roommate.js?v=5003',
-  '/republicas.js?v=5003',
+  '/style.css?v=v1',
+  '/script.js?v=v1',
+  '/roommate.js?v=v1',
+  '/republicas.js?v=v1',
   '/icon.svg',
   '/manifest.json'
 ];
@@ -38,7 +38,7 @@ self.addEventListener('fetch', function(event) {
   var url = new URL(event.request.url);
 
   // API calls — network only
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/uploads/')) {
+  if (url.pathname.startsWith('/api/')) {
     event.respondWith(fetch(event.request));
     return;
   }

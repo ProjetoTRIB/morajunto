@@ -76,6 +76,10 @@ var userSchema = new mongoose.Schema({
         pixKey: { type: String, default: '' }
     },
 
+    // Chave PIX para recebimento (proprietários e indicadores)
+    pixKey: { type: String, default: '' },
+    pixKeyType: { type: String, enum: ['', 'cpf', 'email', 'telefone', 'aleatoria'], default: '' },
+
     matches: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     likedProfiles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     dislikedProfiles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
