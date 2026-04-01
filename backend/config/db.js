@@ -21,7 +21,12 @@ async function connectDB() {
         }
     }
 
-    // Fallback: MongoDB in-memory
+    // Fallback: MongoDB in-memory (only for local development)
+    if (process.env.NODE_ENV === 'production') {
+        dbConnected = false;
+        console.log('⚠️  MongoDB não disponível (produção requer Atlas)');
+        return;
+    }
     try {
         var { MongoMemoryServer } = require('mongodb-memory-server');
         memoryServer = await MongoMemoryServer.create();
