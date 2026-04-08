@@ -251,6 +251,14 @@ function updateNavAuth(loggedIn) {
         navUser.classList.remove('btn', 'btn-accent', 'btn-sm');
         navUser.style.cursor = 'pointer';
         navLogout.style.display = 'none';
+
+        // Dropdown links por role
+        var ddAdmin = document.getElementById('dropdownAdmin');
+        var ddOwner = document.getElementById('dropdownOwner');
+        var ddAgency = document.getElementById('dropdownAgency');
+        if (ddAdmin) ddAdmin.style.display = (currentUser.role === 'admin') ? '' : 'none';
+        if (ddOwner) ddOwner.style.display = (currentUser.role === 'owner' || currentUser.role === 'admin') ? '' : 'none';
+        if (ddAgency) ddAgency.style.display = (currentUser.role === 'agency' || currentUser.role === 'admin') ? '' : 'none';
         navUserMobile.textContent = currentUser.name || 'Minha conta';
         navLogoutMobile.style.display = '';
 
