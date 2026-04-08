@@ -332,6 +332,7 @@ router.get('/:id/status', validateId('id'), authMiddleware, async (req, res) => 
                     tx.paidAt = new Date();
                     await tx.save();
                     await creditAgentCommission(tx);
+                    await updatePaymentScore(tx);
                 }
             } catch (e) { /* MP check failed */ }
         }

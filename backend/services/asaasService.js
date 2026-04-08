@@ -13,7 +13,8 @@ function asaasRequest(method, path, body) {
             method: method,
             headers: {
                 'access_token': API_KEY,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'User-Agent': 'MoraJunto/1.0'
             }
         };
         if (bodyStr && (method === 'POST' || method === 'PUT')) {

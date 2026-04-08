@@ -10,7 +10,7 @@ const ownerNotificationSchema = new mongoose.Schema({
     },
     message: { type: String, required: true, maxlength: 300 },
     read: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now, index: true }
+    createdAt: { type: Date, default: Date.now }
 });
 
 // Auto-delete notifications older than 30 days
