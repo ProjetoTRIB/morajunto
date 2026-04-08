@@ -1071,9 +1071,15 @@
     <div class="page" id="page-agency">
         <section class="dashboard-page">
             <div class="container">
-                <div class="dash-header">
-                    <h1>Painel da Imobiliária</h1>
-                    <p>Gerencie seus imóveis, leads e desempenho.</p>
+                <div class="dash-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+                    <div>
+                        <h1>Painel da Imobiliária</h1>
+                        <p>Gerencie seus imóveis, leads e desempenho.</p>
+                    </div>
+                    <button class="btn btn-outline" onclick="logout()" style="gap:6px;flex-shrink:0">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Sair
+                    </button>
                 </div>
 
                 <!-- Stats -->
@@ -2338,8 +2344,16 @@
     <div class="page" id="page-owner">
         <div class="section section-page-top">
             <div class="container container-md">
-                <h2 class="panel-title">Painel do Proprietário</h2>
-                <p class="panel-subtitle">Gerencie seus imóveis e aluguéis</p>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:8px">
+                    <div>
+                        <h2 class="panel-title">Painel do Proprietário</h2>
+                        <p class="panel-subtitle">Gerencie seus imóveis e aluguéis</p>
+                    </div>
+                    <button class="btn btn-outline" onclick="logout()" style="gap:6px;flex-shrink:0">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Sair
+                    </button>
+                </div>
 
                 <!-- Stats -->
                 <div class="owner-stats-grid">
@@ -2580,8 +2594,16 @@
     <div class="page" id="page-tenant">
         <div class="section section-page-top">
             <div class="container container-sm">
-                <h2 class="panel-title">Meu Aluguel</h2>
-                <p class="panel-subtitle">Pagamentos e informações do seu aluguel</p>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:8px">
+                    <div>
+                        <h2 class="panel-title">Meu Aluguel</h2>
+                        <p class="panel-subtitle">Pagamentos e informações do seu aluguel</p>
+                    </div>
+                    <button class="btn btn-outline" onclick="logout()" style="gap:6px;flex-shrink:0">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Sair
+                    </button>
+                </div>
 
                 <div id="tenantContent">
                     <div id="tenantTransparency" class="hidden"></div>
