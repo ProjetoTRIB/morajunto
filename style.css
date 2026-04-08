@@ -1232,20 +1232,33 @@ button {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 20px 24px;
+  padding: 24px;
   margin-bottom: 24px;
   overflow: visible;
 }
 
+.filters-sidebar > .btn {
+  margin-top: 20px;
+}
+
 .filters-horizontal {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+  align-items: start;
 }
 
 .filter-group {
-  margin-bottom: 16px;
+  margin-bottom: 0;
+}
+
+.filter-group h4 {
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
 }
 
 .filter-group label {
@@ -1308,7 +1321,8 @@ button {
   color: var(--text);
   font-size: 16px;
   transition: border .2s;
-  width: 120px;
+  flex: 1;
+  min-width: 0;
 }
 
 .filter-input:focus {
@@ -1331,6 +1345,7 @@ button {
   cursor: pointer;
   appearance: auto;
   transition: border .2s;
+  width: 100%;
 }
 
 .filter-select:focus {
@@ -1340,6 +1355,7 @@ button {
 
 .filter-btn-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
