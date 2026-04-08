@@ -14,6 +14,7 @@ const { updatePaymentScore } = require('../services/scoreService');
 const Notification = require('../models/Notification');
 const emailService = require('../services/emailService');
 const asaas = require('../services/asaasService');
+const { generateContract } = require('../services/contractService');
 const MP_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN || '';
 const FEE_PERCENT = 8;
 
@@ -400,6 +401,117 @@ router.post('/:id/confirm', validateId('id'), authMiddleware, async (req, res) =
         });
     } catch (e) {
         res.status(500).json({ error: 'Erro ao confirmar' });
+    }
+});
+
+// ===== GET /api/payments/contract/:rentalId — Gerar contrato PDF =====
+router.get('/contract/:rentalId', validateId('rentalId'), authMiddleware, async (req, res) => {
+    try {
+        var rental = await Rental.findById(req.params.rentalId)
+            .populate('property')
+            .populate('owner', 'name email cpf phone')
+            .populate('tenants', 'name email cpf phone');
+
+        if (!rental) return res.status(404).json({ error: 'Aluguel não encontrado' });
+
+        // Only owner, tenant or admin can access
+        var isOwner = rental.owner._id.toString() === req.user.userId;
+        var isTenant = rental.tenants.some(function(t) { return t._id.toString() === req.user.userId; });
+        var isAdmin = req.user.role === 'admin';
+        if (!isOwner && !isTenant && !isAdmin) {
+            return res.status(403).json({ error: 'Sem permissão' });
+        }
+
+        var pdfBuffer = await generateContract({
+            owner: rental.owner,
+            tenants: rental.tenants,
+            property: rental.property,
+            rental: {
+                rentAmount: rental.rentAmount,
+                platformFee: rental.platformFee * 100 || 8,
+                startDate: rental.startDate,
+                dueDay: rental.dueDay || 10
+            }
+        });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename=contrato-morajunto-' + rental._id.toString().substring(0, 8) + '.pdf');
+        res.send(pdfBuffer);
+    } catch (e) {
+        console.error('Contract generation error:', e.message);
+        res.status(500).json({ error: 'Erro ao gerar contrato' });
+    }
+});
+
+// ===== POST /api/payments/contract/:rentalId/accept — Aceite digital do contrato =====
+router.post('/contract/:rentalId/accept', validateId('rentalId'), authMiddleware, async (req, res) => {
+    try {
+        var rental = await Rental.findById(req.params.rentalId);
+        if (!rental) return res.status(404).json({ error: 'Aluguel não encontrado' });
+
+        var userId = req.user.userId;
+        var isOwner = rental.owner.toString() === userId;
+        var isTenant = rental.tenants.some(function(t) { return t.toString() === userId; });
+        if (!isOwner && !isTenant) return res.status(403).json({ error: 'Sem permissão' });
+
+        // Registrar aceite
+        if (!rental.contractAcceptances) rental.contractAcceptances = [];
+        var alreadyAccepted = rental.contractAcceptances.some(function(a) { return a.user.toString() === userId; });
+        if (alreadyAccepted) return res.json({ message: 'Já aceito', accepted: true });
+
+        rental.contractAcceptances.push({
+            user: userId,
+            role: isOwner ? 'owner' : 'tenant',
+            acceptedAt: new Date(),
+            ip: req.headers['x-forwarded-for'] || req.ip
+        });
+        await rental.save();
+
+        // Verificar se todos aceitaram
+        var totalParties = 1 + rental.tenants.length; // owner + tenants
+        var allAccepted = rental.contractAcceptances.length >= totalParties;
+
+        res.json({
+            message: 'Contrato aceito com sucesso',
+            accepted: true,
+            allPartiesAccepted: allAccepted,
+            acceptedCount: rental.contractAcceptances.length,
+            totalParties: totalParties
+        });
+    } catch (e) {
+        console.error('Contract accept error:', e.message);
+        res.status(500).json({ error: 'Erro ao registrar aceite' });
+    }
+});
+
+// ===== GET /api/payments/contract/:rentalId/status — Status do aceite =====
+router.get('/contract/:rentalId/status', validateId('rentalId'), authMiddleware, async (req, res) => {
+    try {
+        var rental = await Rental.findById(req.params.rentalId)
+            .populate('owner', 'name')
+            .populate('tenants', 'name');
+        if (!rental) return res.status(404).json({ error: 'Aluguel não encontrado' });
+
+        var acceptances = rental.contractAcceptances || [];
+        var totalParties = 1 + rental.tenants.length;
+        var parties = [];
+
+        // Owner
+        var ownerAccepted = acceptances.find(function(a) { return a.user.toString() === rental.owner._id.toString(); });
+        parties.push({ name: rental.owner.name, role: 'owner', accepted: !!ownerAccepted, acceptedAt: ownerAccepted ? ownerAccepted.acceptedAt : null });
+
+        // Tenants
+        rental.tenants.forEach(function(t) {
+            var tenantAccepted = acceptances.find(function(a) { return a.user.toString() === t._id.toString(); });
+            parties.push({ name: t.name, role: 'tenant', accepted: !!tenantAccepted, acceptedAt: tenantAccepted ? tenantAccepted.acceptedAt : null });
+        });
+
+        res.json({
+            allAccepted: acceptances.length >= totalParties,
+            parties: parties
+        });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao buscar status' });
     }
 });
 

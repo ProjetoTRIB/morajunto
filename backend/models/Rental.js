@@ -21,6 +21,12 @@ const rentalSchema = new mongoose.Schema({
         paidAt: Date,
         createdAt: { type: Date, default: Date.now }
     }],
+    contractAcceptances: [{
+        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        role: { type: String, enum: ['owner', 'tenant'] },
+        acceptedAt: { type: Date },
+        ip: { type: String }
+    }],
     createdAt: { type: Date, default: Date.now }
 });
 
