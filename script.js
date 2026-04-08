@@ -2019,14 +2019,17 @@ async function toggleAgencyStatus(id) {
 }
 
 function switchAdminTab(tab) {
-    document.querySelectorAll('#page-admin .dash-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('#page-admin .dash-tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('#page-admin .dash-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('#page-admin .dash-tab-content').forEach(function(c) { c.classList.remove('active'); });
 
-    const tabs = document.querySelectorAll('#page-admin .dash-tab');
-    const tabMap = { properties: 0, agencies: 1, leads: 2, referrals: 3, users: 4, verifications: 5, 'owner-leads': 6, rentals: 7, commissions: 8, reports: 9, republicas: 10, conversations: 11 };
-    if (tabs[tabMap[tab]]) tabs[tabMap[tab]].classList.add('active');
+    // Find the button that triggers this tab and activate it
+    document.querySelectorAll('#page-admin .dash-tab').forEach(function(t) {
+        if (t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'" + tab + "'") !== -1) {
+            t.classList.add('active');
+        }
+    });
 
-    const content = document.getElementById('adminTab-' + tab);
+    var content = document.getElementById('adminTab-' + tab);
     if (content) content.classList.add('active');
 
     if (tab === 'referrals') loadAdminReferrals('');

@@ -1474,19 +1474,39 @@
                 </div>
 
                 <!-- Admin Tabs -->
-                <div class="dash-tabs">
-                    <button class="dash-tab active" onclick="switchAdminTab('properties')">Imóveis</button>
-                    <button class="dash-tab" onclick="switchAdminTab('agencies')">Imobiliárias</button>
-                    <button class="dash-tab" onclick="switchAdminTab('leads')">Leads</button>
-                    <button class="dash-tab" onclick="switchAdminTab('referrals')">Indicações</button>
-                    <button class="dash-tab" onclick="switchAdminTab('users')">Usuários</button>
-                    <button class="dash-tab" onclick="switchAdminTab('verifications')">Verificações</button>
-                    <button class="dash-tab" onclick="switchAdminTab('owner-leads')">Proprietários</button>
-                    <button class="dash-tab" onclick="switchAdminTab('rentals')">Aluguéis</button>
-                    <button class="dash-tab" onclick="switchAdminTab('commissions')">Comissões</button>
-                    <button class="dash-tab" onclick="switchAdminTab('reports')">Denúncias</button>
-                    <button class="dash-tab" onclick="switchAdminTab('republicas')">Repúblicas</button>
-                    <button class="dash-tab" onclick="switchAdminTab('conversations')">Chat</button>
+                <div class="dash-tabs-grid">
+                    <div class="dash-tabs-group">
+                        <span class="dash-tabs-label">Imóveis</span>
+                        <div class="dash-tabs-row">
+                            <button class="dash-tab active" onclick="switchAdminTab('properties')">Imóveis</button>
+                            <button class="dash-tab" onclick="switchAdminTab('republicas')">Repúblicas</button>
+                            <button class="dash-tab" onclick="switchAdminTab('referrals')">Indicações</button>
+                        </div>
+                    </div>
+                    <div class="dash-tabs-group">
+                        <span class="dash-tabs-label">Pessoas</span>
+                        <div class="dash-tabs-row">
+                            <button class="dash-tab" onclick="switchAdminTab('users')">Usuários</button>
+                            <button class="dash-tab" onclick="switchAdminTab('agencies')">Imobiliárias</button>
+                            <button class="dash-tab" onclick="switchAdminTab('verifications')">Verificações</button>
+                            <button class="dash-tab" onclick="switchAdminTab('owner-leads')">Proprietários</button>
+                        </div>
+                    </div>
+                    <div class="dash-tabs-group">
+                        <span class="dash-tabs-label">Financeiro</span>
+                        <div class="dash-tabs-row">
+                            <button class="dash-tab" onclick="switchAdminTab('rentals')">Aluguéis</button>
+                            <button class="dash-tab" onclick="switchAdminTab('commissions')">Comissões</button>
+                            <button class="dash-tab" onclick="switchAdminTab('leads')">Leads</button>
+                        </div>
+                    </div>
+                    <div class="dash-tabs-group">
+                        <span class="dash-tabs-label">Moderação</span>
+                        <div class="dash-tabs-row">
+                            <button class="dash-tab" onclick="switchAdminTab('reports')">Denúncias</button>
+                            <button class="dash-tab" onclick="switchAdminTab('conversations')">Chat</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="dash-tab-content active" id="adminTab-properties">

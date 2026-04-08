@@ -2085,6 +2085,37 @@ button {
   color: var(--text-secondary);
 }
 
+.dash-tabs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.dash-tabs-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dash-tabs-label {
+  font-size: .7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.dash-tabs-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .dash-tabs {
   display: flex;
   gap: 4px;
@@ -2094,28 +2125,28 @@ button {
 }
 
 .dash-tab {
-  padding: 10px 20px;
-  font-size: .9rem;
+  padding: 7px 14px;
+  font-size: .82rem;
   font-weight: 500;
   color: var(--text-secondary);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
   cursor: pointer;
-  background: none;
-  border-left: none;
-  border-right: none;
-  border-top: none;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
   white-space: nowrap;
   transition: all var(--transition);
 }
 
 .dash-tab:hover {
   color: var(--text);
+  border-color: var(--accent);
+  background: var(--accent-light);
 }
 
 .dash-tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
   font-weight: 600;
 }
 
@@ -3767,13 +3798,15 @@ body.dark-mode img {
     grid-template-columns: 1fr;
   }
 
-  .dash-tabs {
-    gap: 0;
+  .dash-tabs-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 14px;
   }
 
   .dash-tab {
-    padding: 10px 12px;
-    font-size: .82rem;
+    padding: 6px 10px;
+    font-size: .78rem;
   }
 
   .detail-header h1 {
