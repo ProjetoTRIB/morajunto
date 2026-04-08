@@ -1444,6 +1444,33 @@
                             <span class="dash-stat-label">Leads proprietários</span>
                         </div>
                     </div>
+                    <div class="dash-stat-card">
+                        <div class="dash-stat-icon" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                        </div>
+                        <div>
+                            <span class="dash-stat-val" id="adminStatRevenue">R$ 0</span>
+                            <span class="dash-stat-label">Receita plataforma</span>
+                        </div>
+                    </div>
+                    <div class="dash-stat-card">
+                        <div class="dash-stat-icon dash-stat-icon-indigo">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        </div>
+                        <div>
+                            <span class="dash-stat-val" id="adminStatRentals">0</span>
+                            <span class="dash-stat-label">Aluguéis ativos</span>
+                        </div>
+                    </div>
+                    <div class="dash-stat-card">
+                        <div class="dash-stat-icon dash-stat-icon-red">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        </div>
+                        <div>
+                            <span class="dash-stat-val" id="adminStatReports">0</span>
+                            <span class="dash-stat-label">Denúncias pendentes</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Admin Tabs -->
@@ -1455,6 +1482,11 @@
                     <button class="dash-tab" onclick="switchAdminTab('users')">Usuários</button>
                     <button class="dash-tab" onclick="switchAdminTab('verifications')">Verificações</button>
                     <button class="dash-tab" onclick="switchAdminTab('owner-leads')">Proprietários</button>
+                    <button class="dash-tab" onclick="switchAdminTab('rentals')">Aluguéis</button>
+                    <button class="dash-tab" onclick="switchAdminTab('commissions')">Comissões</button>
+                    <button class="dash-tab" onclick="switchAdminTab('reports')">Denúncias</button>
+                    <button class="dash-tab" onclick="switchAdminTab('republicas')">Repúblicas</button>
+                    <button class="dash-tab" onclick="switchAdminTab('conversations')">Chat</button>
                 </div>
 
                 <div class="dash-tab-content active" id="adminTab-properties">
@@ -1585,6 +1617,74 @@
                             <thead><tr><th>Nome</th><th>Email</th><th>WhatsApp</th><th>Bairro</th><th>Tipo</th><th>Preço</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
                             <tbody id="adminOwnerLeadsTbody"></tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Tab: Aluguéis & Pagamentos -->
+                <div class="dash-tab-content" id="adminTab-rentals">
+                    <h3 style="margin-bottom:16px;color:var(--text)">Aluguéis ativos</h3>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead><tr><th>Imóvel</th><th>Proprietário</th><th>Inquilinos</th><th>Aluguel</th><th>Taxa 8%</th><th>Status</th><th>Início</th></tr></thead>
+                            <tbody id="adminRentalsTbody"></tbody>
+                        </table>
+                    </div>
+                    <h3 style="margin:32px 0 16px;color:var(--text)">Transações de pagamento</h3>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead><tr><th>Inquilino</th><th>Mês</th><th>Valor</th><th>Taxa</th><th>Proprietário recebe</th><th>Status</th><th>Ações</th></tr></thead>
+                            <tbody id="adminPaymentsTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab: Comissões -->
+                <div class="dash-tab-content" id="adminTab-commissions">
+                    <h3 style="margin-bottom:16px;color:var(--text)">Agentes & Saldos</h3>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead><tr><th>Agente</th><th>Email</th><th>Tier</th><th>Saldo</th><th>Total ganho</th><th>Total pago</th><th>Ações</th></tr></thead>
+                            <tbody id="adminAgentsTbody"></tbody>
+                        </table>
+                    </div>
+                    <h3 style="margin:32px 0 16px;color:var(--text)">Histórico de comissões</h3>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead><tr><th>Agente</th><th>Tipo</th><th>Valor</th><th>Descrição</th><th>Status</th><th>Data</th></tr></thead>
+                            <tbody id="adminCommissionsTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab: Denúncias -->
+                <div class="dash-tab-content" id="adminTab-reports">
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead><tr><th>Denunciante</th><th>Denunciado</th><th>Motivo</th><th>Descrição</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
+                            <tbody id="adminReportsTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab: Repúblicas -->
+                <div class="dash-tab-content" id="adminTab-republicas">
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead><tr><th>Nome</th><th>Dono</th><th>Membros</th><th>Vagas</th><th>Preço</th><th>Bairro</th><th>Status</th><th>Ações</th></tr></thead>
+                            <tbody id="adminRepublicasTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab: Chat/Moderação -->
+                <div class="dash-tab-content" id="adminTab-conversations">
+                    <div id="adminConversationsList"></div>
+                    <div id="adminMessagesView" style="display:none;margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;max-height:500px;overflow-y:auto">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                            <h4 id="adminMessagesTitle" style="color:var(--text)">Mensagens</h4>
+                            <button class="btn btn-outline btn-sm" onclick="document.getElementById('adminMessagesView').style.display='none'">Fechar</button>
+                        </div>
+                        <div id="adminMessagesList"></div>
                     </div>
                 </div>
 

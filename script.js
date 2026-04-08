@@ -1902,6 +1902,9 @@ async function loadAdminPanel() {
             document.getElementById('adminStatUsers').textContent = stats.totalUsers || stats.users || 0;
             if (document.getElementById('adminStatVerifications')) document.getElementById('adminStatVerifications').textContent = stats.pendingVerifications || 0;
             if (document.getElementById('adminStatOwnerLeads')) document.getElementById('adminStatOwnerLeads').textContent = stats.ownerLeads || 0;
+            if (document.getElementById('adminStatRentals')) document.getElementById('adminStatRentals').textContent = stats.totalRentals || 0;
+            if (document.getElementById('adminStatReports')) document.getElementById('adminStatReports').textContent = stats.pendingReports || 0;
+            if (document.getElementById('adminStatRevenue')) document.getElementById('adminStatRevenue').textContent = 'R$ ' + (stats.platformRevenue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 });
         }
     } catch {
         console.error('Failed to load admin stats');
@@ -2020,7 +2023,7 @@ function switchAdminTab(tab) {
     document.querySelectorAll('#page-admin .dash-tab-content').forEach(c => c.classList.remove('active'));
 
     const tabs = document.querySelectorAll('#page-admin .dash-tab');
-    const tabMap = { properties: 0, agencies: 1, leads: 2, referrals: 3, users: 4, verifications: 5, 'owner-leads': 6 };
+    const tabMap = { properties: 0, agencies: 1, leads: 2, referrals: 3, users: 4, verifications: 5, 'owner-leads': 6, rentals: 7, commissions: 8, reports: 9, republicas: 10, conversations: 11 };
     if (tabs[tabMap[tab]]) tabs[tabMap[tab]].classList.add('active');
 
     const content = document.getElementById('adminTab-' + tab);
@@ -2030,6 +2033,11 @@ function switchAdminTab(tab) {
     if (tab === 'users') loadAdminUsers();
     if (tab === 'verifications') loadAdminVerifications();
     if (tab === 'owner-leads') loadAdminOwnerLeads();
+    if (tab === 'rentals') loadAdminRentals();
+    if (tab === 'commissions') loadAdminCommissions();
+    if (tab === 'reports') loadAdminReports();
+    if (tab === 'republicas') loadAdminRepublicas();
+    if (tab === 'conversations') loadAdminConversations();
 }
 
 // ===== ADMIN: USERS TAB =====
@@ -2215,6 +2223,190 @@ async function adminAddOwnerLeadNote(id) {
         if (res.ok) { showToast('Nota adicionada', 'success'); loadAdminOwnerLeads(); }
         else showToast('Erro', 'error');
     } catch { showToast('Erro', 'error'); }
+}
+
+// ===== ADMIN: RENTALS & PAYMENTS =====
+async function loadAdminRentals() {
+    try {
+        var res = await fetch(API + '/admin/rentals', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        if (!res.ok) throw new Error('Failed');
+        var data = await res.json();
+        var rentals = data.rentals || [];
+        document.getElementById('adminRentalsTbody').innerHTML = rentals.map(function(r) {
+            var propTitle = r.property ? r.property.title : '-';
+            var ownerName = r.owner ? r.owner.name : '-';
+            var tenantNames = (r.tenants || []).map(function(t) { return t.name; }).join(', ') || '-';
+            var date = r.startDate ? new Date(r.startDate).toLocaleDateString('pt-BR') : '-';
+            var statusClass = r.status === 'active' ? 'status-active' : 'status-pending';
+            return '<tr><td>' + escapeHtml(propTitle) + '</td><td>' + escapeHtml(ownerName) + '</td><td>' + escapeHtml(tenantNames) + '</td><td>' + formatPrice(r.rentAmount) + '</td><td>' + formatPrice(r.feeAmount) + '</td><td><span class="status-badge ' + statusClass + '">' + (r.status || 'active') + '</span></td><td>' + date + '</td></tr>';
+        }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Nenhum aluguel</td></tr>';
+    } catch { document.getElementById('adminRentalsTbody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Erro ao carregar</td></tr>'; }
+
+    // Pagamentos
+    try {
+        var res2 = await fetch(API + '/admin/payments', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        if (!res2.ok) throw new Error('Failed');
+        var data2 = await res2.json();
+        var payments = data2.payments || [];
+        document.getElementById('adminPaymentsTbody').innerHTML = payments.map(function(p) {
+            var statusClass = p.status === 'paid' ? 'status-active' : p.status === 'failed' ? 'status-inactive' : 'status-pending';
+            var canConfirm = p.status === 'pending';
+            return '<tr><td>' + escapeHtml(p.tenantName || '-') + '</td><td>' + (p.month || '-') + '</td><td>' + formatPrice(p.totalAmount) + '</td><td>' + formatPrice(p.feeAmount) + '</td><td>' + formatPrice(p.ownerReceives) + '</td><td><span class="status-badge ' + statusClass + '">' + (p.status || 'pending') + '</span></td><td>' + (canConfirm ? '<button class="btn btn-sm" style="background:var(--green);color:#fff;font-size:.75rem" onclick="adminConfirmPayment(\'' + p._id + '\')">Confirmar</button>' : '-') + '</td></tr>';
+        }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Nenhum pagamento</td></tr>';
+    } catch { document.getElementById('adminPaymentsTbody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Erro ao carregar</td></tr>'; }
+}
+
+async function adminConfirmPayment(id) {
+    if (!confirm('Confirmar este pagamento manualmente?')) return;
+    try {
+        var res = await fetch(API + '/admin/payments/' + id + '/confirm', {
+            method: 'PUT', headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' }, body: '{}'
+        });
+        if (res.ok) { showToast('Pagamento confirmado!', 'success'); loadAdminRentals(); loadAdminPanel(); }
+        else { var d = await res.json(); showToast(d.error || 'Erro', 'error'); }
+    } catch { showToast('Erro ao confirmar', 'error'); }
+}
+
+// ===== ADMIN: COMMISSIONS =====
+async function loadAdminCommissions() {
+    try {
+        var res = await fetch(API + '/admin/agents', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        if (!res.ok) throw new Error('Failed');
+        var data = await res.json();
+        var agents = data.agents || [];
+        document.getElementById('adminAgentsTbody').innerHTML = agents.map(function(a) {
+            var ap = a.agentProfile || {};
+            var balance = (ap.availableBalance || 0).toFixed(2);
+            return '<tr><td><strong>' + escapeHtml(a.name) + '</strong></td><td>' + escapeHtml(a.email) + '</td><td><span class="status-badge status-active">' + (ap.tier || 'iniciante') + '</span></td><td>R$ ' + balance + '</td><td>' + formatPrice(ap.totalEarned || 0) + '</td><td>' + formatPrice(ap.totalPaidOut || 0) + '</td><td>' + (parseFloat(balance) > 0 ? '<button class="btn btn-sm" style="background:var(--green);color:#fff;font-size:.75rem" onclick="adminProcessPayout(\'' + a._id + '\')">Pagar</button>' : '-') + '</td></tr>';
+        }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Nenhum agente</td></tr>';
+    } catch { document.getElementById('adminAgentsTbody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Erro ao carregar</td></tr>'; }
+
+    try {
+        var res2 = await fetch(API + '/admin/commissions', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        if (!res2.ok) throw new Error('Failed');
+        var data2 = await res2.json();
+        var comms = data2.commissions || [];
+        var typeLabels = { rental_commission: 'Comissão', bonus_first_listing: 'Bônus 1º imóvel', bonus_fast_rental: 'Bônus aluguel rápido', bonus_referral: 'Bônus indicação', payout: 'Payout' };
+        document.getElementById('adminCommissionsTbody').innerHTML = comms.map(function(c) {
+            var agentName = c.agent ? c.agent.name : '-';
+            var date = c.createdAt ? new Date(c.createdAt).toLocaleDateString('pt-BR') : '-';
+            var isPayout = c.type === 'payout';
+            return '<tr><td>' + escapeHtml(agentName) + '</td><td>' + (typeLabels[c.type] || c.type) + '</td><td style="color:' + (isPayout ? 'var(--coral)' : 'var(--green)') + ';font-weight:600">' + (isPayout ? '-' : '+') + 'R$ ' + Math.abs(c.amount || 0).toFixed(2) + '</td><td style="font-size:.8rem">' + escapeHtml(c.description || '-') + '</td><td><span class="status-badge ' + (c.status === 'paid_out' ? 'status-inactive' : 'status-active') + '">' + (c.status || '-') + '</span></td><td>' + date + '</td></tr>';
+        }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Nenhuma comissão</td></tr>';
+    } catch { document.getElementById('adminCommissionsTbody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Erro ao carregar</td></tr>'; }
+}
+
+async function adminProcessPayout(agentId) {
+    if (!confirm('Processar payout deste agente? O saldo será zerado.')) return;
+    try {
+        var res = await fetch(API + '/admin/agents/' + agentId + '/payout', {
+            method: 'PUT', headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' }, body: '{}'
+        });
+        var d = await res.json();
+        if (res.ok) { showToast(d.message, 'success'); loadAdminCommissions(); }
+        else showToast(d.error || 'Erro', 'error');
+    } catch { showToast('Erro ao processar payout', 'error'); }
+}
+
+// ===== ADMIN: REPORTS =====
+async function loadAdminReports() {
+    try {
+        var res = await fetch(API + '/admin/reports', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        if (!res.ok) throw new Error('Failed');
+        var data = await res.json();
+        var reports = data.reports || [];
+        var reasonLabels = { scam: 'Golpe', harassment: 'Assédio', fake_profile: 'Perfil falso', contact_bypass: 'Bypass contato', other: 'Outro' };
+        var statusLabels = { pending: 'Pendente', reviewed: 'Revisado', resolved: 'Resolvido', dismissed: 'Dispensado' };
+        document.getElementById('adminReportsTbody').innerHTML = reports.map(function(r) {
+            var reporter = r.reporter ? r.reporter.name : '-';
+            var reported = r.reported ? r.reported.name : '-';
+            var date = r.createdAt ? new Date(r.createdAt).toLocaleDateString('pt-BR') : '-';
+            var statusClass = r.status === 'resolved' ? 'status-active' : r.status === 'dismissed' ? 'status-inactive' : 'status-pending';
+            var isPending = r.status === 'pending' || r.status === 'reviewed';
+            return '<tr><td>' + escapeHtml(reporter) + '</td><td>' + escapeHtml(reported) + '</td><td>' + (reasonLabels[r.reason] || r.reason) + '</td><td style="max-width:200px;font-size:.8rem;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(r.description || '-') + '</td><td><span class="status-badge ' + statusClass + '">' + (statusLabels[r.status] || r.status) + '</span></td><td>' + date + '</td><td>' + (isPending ? '<button class="btn btn-sm" style="background:var(--green);color:#fff;font-size:.75rem;margin-right:4px" onclick="adminResolveReport(\'' + r._id + '\',\'resolved\')">Resolver</button><button class="btn btn-outline btn-sm" style="font-size:.75rem" onclick="adminResolveReport(\'' + r._id + '\',\'dismissed\')">Dispensar</button>' : '-') + '</td></tr>';
+        }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Nenhuma denúncia</td></tr>';
+    } catch { document.getElementById('adminReportsTbody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Erro ao carregar</td></tr>'; }
+}
+
+async function adminResolveReport(id, status) {
+    var note = prompt('Nota do admin (opcional):');
+    if (note === null) return;
+    try {
+        var res = await fetch(API + '/admin/reports/' + id, {
+            method: 'PUT', headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: status, adminNote: note })
+        });
+        if (res.ok) { showToast('Denúncia atualizada', 'success'); loadAdminReports(); loadAdminPanel(); }
+        else showToast('Erro', 'error');
+    } catch { showToast('Erro', 'error'); }
+}
+
+// ===== ADMIN: REPUBLICAS =====
+async function loadAdminRepublicas() {
+    try {
+        var res = await fetch(API + '/admin/republicas', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        if (!res.ok) throw new Error('Failed');
+        var data = await res.json();
+        var reps = data.republicas || [];
+        document.getElementById('adminRepublicasTbody').innerHTML = reps.map(function(r) {
+            var ownerName = r.owner ? r.owner.name : '-';
+            var members = (r.members || []).length;
+            var statusClass = r.status === 'active' ? 'status-active' : r.status === 'full' ? 'status-pending' : 'status-inactive';
+            return '<tr><td><strong>' + escapeHtml(r.name || '-') + '</strong></td><td>' + escapeHtml(ownerName) + '</td><td>' + members + '/' + (r.maxMembers || '?') + '</td><td>' + (r.availableSpots || 0) + '</td><td>' + formatPrice(r.price) + '</td><td>' + escapeHtml(r.neighborhood || '-') + '</td><td><span class="status-badge ' + statusClass + '">' + (r.status || '-') + '</span></td><td><button class="btn btn-outline btn-sm" style="color:var(--coral);border-color:var(--coral);font-size:.75rem" onclick="adminDeleteRepublica(\'' + r._id + '\')">Excluir</button></td></tr>';
+        }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text-muted)">Nenhuma república</td></tr>';
+    } catch { document.getElementById('adminRepublicasTbody').innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted)">Erro ao carregar</td></tr>'; }
+}
+
+async function adminDeleteRepublica(id) {
+    if (!confirm('Excluir esta república permanentemente?')) return;
+    try {
+        var res = await fetch(API + '/admin/republicas/' + id, {
+            method: 'DELETE', headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (res.ok) { showToast('República removida', 'success'); loadAdminRepublicas(); }
+        else showToast('Erro', 'error');
+    } catch { showToast('Erro', 'error'); }
+}
+
+// ===== ADMIN: CONVERSATIONS =====
+async function loadAdminConversations() {
+    try {
+        var res = await fetch(API + '/admin/conversations', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        if (!res.ok) throw new Error('Failed');
+        var data = await res.json();
+        var convs = data.conversations || [];
+        var html = '<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Participantes</th><th>Imóvel</th><th>Última mensagem</th><th>Data</th><th>Ações</th></tr></thead><tbody>';
+        html += convs.map(function(c) {
+            var names = (c.participants || []).map(function(p) { return p.name; }).join(' ↔ ');
+            var date = c.lastMessageAt ? new Date(c.lastMessageAt).toLocaleDateString('pt-BR') : '-';
+            var lastMsg = c.lastMessage ? c.lastMessage.substring(0, 40) + (c.lastMessage.length > 40 ? '...' : '') : '-';
+            return '<tr><td>' + escapeHtml(names) + '</td><td style="font-size:.82rem">' + escapeHtml(c.propertyTitle || '-') + '</td><td style="font-size:.82rem;color:var(--text-secondary)">' + escapeHtml(lastMsg) + '</td><td>' + date + '</td><td><button class="btn btn-outline btn-sm" style="font-size:.75rem" onclick="adminViewMessages(\'' + c._id + '\')">Ver mensagens</button></td></tr>';
+        }).join('');
+        html += '</tbody></table></div>';
+        document.getElementById('adminConversationsList').innerHTML = convs.length ? html : '<p style="text-align:center;color:var(--text-muted);padding:32px 0">Nenhuma conversa</p>';
+    } catch { document.getElementById('adminConversationsList').innerHTML = '<p style="text-align:center;color:var(--text-muted)">Erro ao carregar</p>'; }
+}
+
+async function adminViewMessages(convId) {
+    try {
+        var res = await fetch(API + '/admin/conversations/' + convId + '/messages', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        if (!res.ok) throw new Error('Failed');
+        var data = await res.json();
+        var conv = data.conversation;
+        var names = (conv.participants || []).map(function(p) { return p.name; }).join(' ↔ ');
+        document.getElementById('adminMessagesTitle').textContent = 'Chat: ' + names;
+        var msgs = conv.messages || [];
+        document.getElementById('adminMessagesList').innerHTML = msgs.map(function(m) {
+            var time = m.createdAt ? new Date(m.createdAt).toLocaleString('pt-BR') : '';
+            var blocked = m.blocked;
+            return '<div style="padding:8px 12px;margin-bottom:4px;border-radius:8px;background:' + (blocked ? 'rgba(248,113,113,.1)' : 'var(--bg)') + ';border:1px solid ' + (blocked ? 'var(--coral)' : 'var(--border)') + '">' +
+                '<div style="display:flex;justify-content:space-between;margin-bottom:2px"><strong style="font-size:.82rem;color:var(--text)">' + escapeHtml(m.senderName || 'Anônimo') + '</strong><span style="font-size:.72rem;color:var(--text-muted)">' + time + '</span></div>' +
+                '<p style="font-size:.85rem;color:var(--text-secondary);margin:0">' + escapeHtml(m.text || '') + '</p>' +
+                (blocked ? '<span style="font-size:.7rem;color:var(--coral);font-weight:600">⚠ BLOQUEADA (bypass contato)</span>' : '') +
+                '</div>';
+        }).join('');
+        document.getElementById('adminMessagesView').style.display = 'block';
+    } catch { showToast('Erro ao carregar mensagens', 'error'); }
 }
 
 // ===== FORMAT HELPERS =====

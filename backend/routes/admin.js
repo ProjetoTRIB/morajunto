@@ -4,6 +4,12 @@ const User = require('../models/User');
 const Property = require('../models/Property');
 const Lead = require('../models/Lead');
 const OwnerLead = require('../models/OwnerLead');
+const Rental = require('../models/Rental');
+const PaymentTransaction = require('../models/PaymentTransaction');
+const AgentCommission = require('../models/AgentCommission');
+const Report = require('../models/Report');
+const Republica = require('../models/Republica');
+const Conversation = require('../models/Conversation');
 const authMiddleware = require('../middleware/auth');
 const { adminMiddleware } = require('../middleware/auth');
 const connectDB = require('../config/db');
@@ -29,8 +35,15 @@ router.get('/stats', async (req, res) => {
         var totalLeads = await Lead.countDocuments();
         var pendingVerifications = await User.countDocuments({ 'identityVerification.status': 'pending' });
         var ownerLeads = await OwnerLead.countDocuments();
+        var totalRentals = await Rental.countDocuments({ status: 'active' });
+        var pendingReports = await Report.countDocuments({ status: 'pending' });
+        var revenueAgg = await PaymentTransaction.aggregate([
+            { $match: { status: 'paid' } },
+            { $group: { _id: null, total: { $sum: '$feeAmount' } } }
+        ]);
+        var platformRevenue = revenueAgg[0] ? revenueAgg[0].total : 0;
 
-        res.json({ totalProperties, activeProperties, totalUsers, totalAgencies, totalLeads, pendingVerifications, ownerLeads });
+        res.json({ totalProperties, activeProperties, totalUsers, totalAgencies, totalLeads, pendingVerifications, ownerLeads, totalRentals, pendingReports, platformRevenue });
     } catch (e) {
         res.status(500).json({ error: 'Erro ao buscar estatísticas' });
     }
@@ -196,6 +209,198 @@ router.put('/owner-leads/:id', validateId('id'), async (req, res) => {
         res.status(500).json({ error: 'Erro ao atualizar lead' });
     }
 });
+
+// ===== RENTALS & PAYMENTS =====
+
+// GET /api/admin/rentals — todos os aluguéis
+router.get('/rentals', async (req, res) => {
+    try {
+        var rentals = await Rental.find()
+            .populate('property', 'title neighborhood')
+            .populate('owner', 'name email')
+            .populate('tenants', 'name email')
+            .sort({ createdAt: -1 })
+            .limit(200);
+        res.json({ rentals });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao listar aluguéis' });
+    }
+});
+
+// GET /api/admin/payments — todas as transações
+router.get('/payments', async (req, res) => {
+    try {
+        var payments = await PaymentTransaction.find()
+            .sort({ createdAt: -1 })
+            .limit(200);
+        res.json({ payments });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao listar pagamentos' });
+    }
+});
+
+// PUT /api/admin/payments/:id/confirm — confirmar pagamento manualmente
+router.put('/payments/:id/confirm', validateId('id'), async (req, res) => {
+    try {
+        var tx = await PaymentTransaction.findById(req.params.id);
+        if (!tx) return res.status(404).json({ error: 'Transação não encontrada' });
+        if (tx.status === 'paid') return res.status(400).json({ error: 'Já está pago' });
+        tx.status = 'paid';
+        tx.mpStatus = 'manual_confirm';
+        tx.paidAt = new Date();
+        tx.confirmedBy = 'admin';
+        await tx.save();
+        res.json({ message: 'Pagamento confirmado manualmente', tx });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao confirmar pagamento' });
+    }
+});
+
+// ===== AGENT COMMISSIONS =====
+
+// GET /api/admin/agents — agentes com tier e saldo
+router.get('/agents', async (req, res) => {
+    try {
+        var agents = await User.find({ role: 'agency' })
+            .select('name email phone agentProfile createdAt')
+            .sort({ createdAt: -1 });
+        res.json({ agents });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao listar agentes' });
+    }
+});
+
+// GET /api/admin/commissions — todas as comissões
+router.get('/commissions', async (req, res) => {
+    try {
+        var commissions = await AgentCommission.find()
+            .populate('agent', 'name email')
+            .sort({ createdAt: -1 })
+            .limit(200);
+        res.json({ commissions });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao listar comissões' });
+    }
+});
+
+// PUT /api/admin/agents/:id/payout — processar payout do agente
+router.put('/agents/:id/payout', validateId('id'), async (req, res) => {
+    try {
+        var agent = await User.findById(req.params.id);
+        if (!agent || agent.role !== 'agency') return res.status(404).json({ error: 'Agente não encontrado' });
+        var balance = agent.agentProfile ? agent.agentProfile.availableBalance : 0;
+        if (balance <= 0) return res.status(400).json({ error: 'Saldo zero' });
+
+        await AgentCommission.create({
+            agent: agent._id,
+            type: 'payout',
+            amount: -balance,
+            description: 'Payout admin - R$' + balance.toFixed(2),
+            status: 'paid_out',
+            paidOutAt: new Date(),
+            tierAtTime: agent.agentProfile ? agent.agentProfile.tier : 'iniciante'
+        });
+
+        agent.agentProfile.totalPaidOut = (agent.agentProfile.totalPaidOut || 0) + balance;
+        agent.agentProfile.availableBalance = 0;
+        await agent.save();
+
+        res.json({ message: 'Payout de R$' + balance.toFixed(2) + ' processado' });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao processar payout' });
+    }
+});
+
+// ===== REPORTS/DENÚNCIAS =====
+
+// GET /api/admin/reports — todas as denúncias
+router.get('/reports', async (req, res) => {
+    try {
+        var reports = await Report.find()
+            .populate('reporter', 'name email')
+            .populate('reported', 'name email')
+            .sort({ createdAt: -1 })
+            .limit(200);
+        res.json({ reports });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao listar denúncias' });
+    }
+});
+
+// PUT /api/admin/reports/:id — resolver/dispensar denúncia
+router.put('/reports/:id', validateId('id'), async (req, res) => {
+    try {
+        var { status, adminNote } = req.body;
+        if (!['reviewed', 'resolved', 'dismissed'].includes(status)) {
+            return res.status(400).json({ error: 'Status inválido' });
+        }
+        var report = await Report.findByIdAndUpdate(req.params.id, {
+            status,
+            adminNote: (adminNote || '').substring(0, 500),
+            resolvedAt: new Date()
+        }, { new: true });
+        if (!report) return res.status(404).json({ error: 'Denúncia não encontrada' });
+        res.json({ report });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao atualizar denúncia' });
+    }
+});
+
+// ===== REPÚBLICAS =====
+
+// GET /api/admin/republicas — todas as repúblicas
+router.get('/republicas', async (req, res) => {
+    try {
+        var republicas = await Republica.find()
+            .populate('owner', 'name email')
+            .populate('members', 'name')
+            .sort({ createdAt: -1 })
+            .limit(200);
+        res.json({ republicas });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao listar repúblicas' });
+    }
+});
+
+// DELETE /api/admin/republicas/:id
+router.delete('/republicas/:id', validateId('id'), async (req, res) => {
+    try {
+        var rep = await Republica.findByIdAndDelete(req.params.id);
+        if (!rep) return res.status(404).json({ error: 'República não encontrada' });
+        res.json({ message: 'República removida' });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao remover república' });
+    }
+});
+
+// ===== CHAT/MODERAÇÃO =====
+
+// GET /api/admin/conversations — conversas recentes
+router.get('/conversations', async (req, res) => {
+    try {
+        var conversations = await Conversation.find()
+            .populate('participants', 'name email')
+            .sort({ lastMessageAt: -1 })
+            .limit(100);
+        res.json({ conversations });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao listar conversas' });
+    }
+});
+
+// GET /api/admin/conversations/:id/messages — mensagens de uma conversa
+router.get('/conversations/:id/messages', validateId('id'), async (req, res) => {
+    try {
+        var conv = await Conversation.findById(req.params.id)
+            .populate('participants', 'name email');
+        if (!conv) return res.status(404).json({ error: 'Conversa não encontrada' });
+        res.json({ conversation: conv });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao buscar mensagens' });
+    }
+});
+
+// ===== USERS =====
 
 // GET /api/admin/users — listar todos os usuários com filtro
 router.get('/users', async (req, res) => {
