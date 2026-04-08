@@ -21,10 +21,21 @@ async function connectDB() {
         }
     }
 
+    // Fallback: MongoDB local (installed on VPS)
+    var localUri = process.env.MONGODB_LOCAL_URI || 'mongodb://127.0.0.1:27017/morajunto';
+    try {
+        await mongoose.connect(localUri, { serverSelectionTimeoutMS: 5000 });
+        dbConnected = true;
+        console.log('📦 MongoDB local conectado (' + localUri + ')');
+        return;
+    } catch (err) {
+        console.log('⚠️  MongoDB local não disponível:', err.message.substring(0, 80));
+    }
+
     // Fallback: MongoDB in-memory (only for local development)
     if (process.env.NODE_ENV === 'production') {
         dbConnected = false;
-        console.log('⚠️  MongoDB não disponível (produção requer Atlas)');
+        console.log('⚠️  MongoDB não disponível');
         return;
     }
     try {
@@ -33,7 +44,7 @@ async function connectDB() {
         var uri = memoryServer.getUri();
         await mongoose.connect(uri);
         dbConnected = true;
-        console.log('📦 MongoDB local (em memória) conectado');
+        console.log('📦 MongoDB em memória conectado');
         console.log('   ⚠️  Dados serão perdidos ao parar o servidor');
     } catch (err) {
         dbConnected = false;
