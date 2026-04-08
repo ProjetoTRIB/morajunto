@@ -499,7 +499,7 @@ button {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 30%, rgba(15,13,26,.5) 100%);
+  background: linear-gradient(180deg, rgba(15,13,26,.15) 0%, rgba(15,13,26,.65) 100%);
 }
 .stat-card .stat-val {
   margin-top: 14px;
