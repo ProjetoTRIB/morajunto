@@ -247,9 +247,10 @@ function updateNavAuth(loggedIn) {
         if (bottomChat) bottomChat.style.display = '';
 
         navUser.textContent = currentUser.name || 'Minha conta';
-        navUser.onclick = null;
+        navUser.onclick = function(e) { e.preventDefault(); toggleUserDropdown(); };
         navUser.classList.remove('btn', 'btn-accent', 'btn-sm');
-        navLogout.style.display = '';
+        navUser.style.cursor = 'pointer';
+        navLogout.style.display = 'none';
         navUserMobile.textContent = currentUser.name || 'Minha conta';
         navLogoutMobile.style.display = '';
 
@@ -512,9 +513,26 @@ function logout() {
     currentToken = null;
     currentUser = null;
     localStorage.removeItem('alugaja_token');
+    closeUserDropdown();
     updateNavAuth(false);
     showPage('home');
 }
+
+function toggleUserDropdown() {
+    var dd = document.getElementById('navUserDropdown');
+    if (dd) dd.classList.toggle('open');
+}
+
+function closeUserDropdown() {
+    var dd = document.getElementById('navUserDropdown');
+    if (dd) dd.classList.remove('open');
+}
+
+// Fechar dropdown ao clicar fora
+document.addEventListener('click', function(e) {
+    var wrap = document.querySelector('.nav-user-wrap');
+    if (wrap && !wrap.contains(e.target)) closeUserDropdown();
+});
 
 // ===== STATS =====
 async function loadStats() {

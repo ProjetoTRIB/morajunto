@@ -310,6 +310,44 @@ button {
   background: var(--accent-hover) !important;
 }
 
+/* User dropdown */
+.nav-user-wrap {
+  position: relative;
+}
+.nav-user-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  min-width: 180px;
+  z-index: 1000;
+  overflow: hidden;
+}
+.nav-user-dropdown.open {
+  display: block;
+}
+.nav-user-dropdown a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  font-size: .88rem;
+  color: var(--text);
+  text-decoration: none;
+  transition: background .15s;
+}
+.nav-user-dropdown a:hover {
+  background: var(--bg-alt);
+}
+.nav-user-dropdown a:last-child {
+  border-top: 1px solid var(--border);
+  color: var(--coral);
+}
+
 .nav-mobile {
   display: none;
   background: none;
