@@ -94,6 +94,8 @@ var userSchema = new mongoose.Schema({
     likedProfiles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     dislikedProfiles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 
+    asaasCustomerId: { type: String, default: '' },
+
     loginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date },
     lastLogin: { type: Date },

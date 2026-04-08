@@ -13,6 +13,7 @@ const { getTierByName, creditAgentCommission } = require('../services/commission
 const { updatePaymentScore } = require('../services/scoreService');
 const Notification = require('../models/Notification');
 const emailService = require('../services/emailService');
+const asaas = require('../services/asaasService');
 const MP_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN || '';
 const FEE_PERCENT = 8;
 
@@ -199,19 +200,65 @@ router.post('/:id/pix', validateId('id'), authMiddleware, async (req, res) => {
         }
         if (tx.status === 'paid') return res.status(400).json({ error: 'Já foi pago' });
 
+        // Se já tem PIX gerado (Asaas ou MP), retornar o existente
+        if (tx.asaasPaymentId && tx.pixQrCode) {
+            return res.json({
+                transactionId: tx._id,
+                asaasPaymentId: tx.asaasPaymentId,
+                qrCode: tx.pixQrCode,
+                qrCodeBase64: tx.pixQrCodeBase64 || '',
+                amount: tx.totalAmount,
+                provider: 'asaas'
+            });
+        }
+
         var tenant = await User.findById(req.user.userId);
-        var description = 'MoraJunto - Aluguel ' + tx.month + ' - ' + (tx.property ? tx.property.title : 'Imóvel');
+        var description = 'MoraJunto - Aluguel ' + tx.month;
 
+        // ===== ASAAS (primário) =====
+        if (asaas.isConfigured()) {
+            try {
+                // Garantir que inquilino tem customer no Asaas
+                var customer;
+                if (tenant.asaasCustomerId) {
+                    customer = { id: tenant.asaasCustomerId };
+                } else {
+                    customer = await asaas.ensureCustomer(tenant.name, tenant.cpf || '', tenant.email);
+                    tenant.asaasCustomerId = customer.id;
+                    await tenant.save();
+                }
+
+                // Criar cobrança PIX
+                var dueStr = tx.dueDate ? tx.dueDate.toISOString().split('T')[0] : new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
+                var charge = await asaas.createPixCharge(customer.id, tx.totalAmount, dueStr, description);
+
+                // Buscar QR Code
+                var qr = await asaas.getPixQrCode(charge.id);
+
+                tx.asaasPaymentId = charge.id;
+                tx.asaasStatus = charge.status;
+                tx.pixQrCode = qr.payload || '';
+                tx.pixQrCodeBase64 = qr.encodedImage || '';
+                await tx.save();
+
+                return res.json({
+                    transactionId: tx._id,
+                    asaasPaymentId: charge.id,
+                    qrCode: tx.pixQrCode,
+                    qrCodeBase64: tx.pixQrCodeBase64,
+                    amount: tx.totalAmount,
+                    description: description,
+                    provider: 'asaas'
+                });
+            } catch (asaasError) {
+                console.error('[ASAAS] Erro ao gerar PIX:', asaasError.message);
+                // Fall through to MP or simulation
+            }
+        }
+
+        // ===== MERCADO PAGO (fallback) =====
         try {
-            // Try Mercado Pago PIX
-            var mpResult = await createMPPixPayment(
-                tx.totalAmount,
-                description,
-                tenant.email,
-                tenant.name,
-                tx._id.toString()
-            );
-
+            var mpResult = await createMPPixPayment(tx.totalAmount, description, tenant.email, tenant.name, tx._id.toString());
             var pix = mpResult.point_of_interaction && mpResult.point_of_interaction.transaction_data;
             tx.mpPaymentId = String(mpResult.id);
             tx.mpStatus = mpResult.status;
@@ -219,29 +266,31 @@ router.post('/:id/pix', validateId('id'), authMiddleware, async (req, res) => {
             tx.pixQrCodeBase64 = pix ? pix.qr_code_base64 : '';
             await tx.save();
 
-            res.json({
+            return res.json({
                 transactionId: tx._id,
                 mpPaymentId: mpResult.id,
                 qrCode: tx.pixQrCode,
                 qrCodeBase64: tx.pixQrCodeBase64,
                 amount: tx.totalAmount,
-                description: description
+                description: description,
+                provider: 'mercadopago'
             });
         } catch (mpError) {
-            // Mercado Pago failed — return simulation mode
+            // Simulation mode
             tx.mpStatus = 'simulation';
             await tx.save();
-
-            res.json({
+            return res.json({
                 transactionId: tx._id,
                 simulation: true,
                 amount: tx.totalAmount,
                 description: description,
-                message: 'PIX em modo simulação. Em produção, o QR Code será gerado automaticamente.',
-                pixCode: 'MORAJUNTO' + tx._id.toString().substring(0, 8).toUpperCase()
+                message: 'PIX em modo simulação.',
+                pixCode: 'MORAJUNTO' + tx._id.toString().substring(0, 8).toUpperCase(),
+                provider: 'simulation'
             });
         }
     } catch (e) {
+        console.error('PIX generation error:', e.message);
         res.status(500).json({ error: 'Erro ao gerar PIX' });
     }
 });
@@ -257,8 +306,24 @@ router.get('/:id/status', validateId('id'), authMiddleware, async (req, res) => 
             return res.status(403).json({ error: 'Sem permissão para ver esta cobrança' });
         }
 
-        // If has MP payment ID, check status
-        if (tx.mpPaymentId && tx.mpStatus !== 'simulation' && MP_TOKEN) {
+        // Check Asaas status first
+        if (tx.asaasPaymentId && tx.status !== 'paid') {
+            try {
+                var asaasResult = await asaas.getPaymentStatus(tx.asaasPaymentId);
+                tx.asaasStatus = asaasResult.status;
+                if (['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'].includes(asaasResult.status)) {
+                    tx.status = 'paid';
+                    tx.paidAt = new Date();
+                    await tx.save();
+                    await creditAgentCommission(tx);
+                    await updatePaymentScore(tx);
+                } else {
+                    await tx.save();
+                }
+            } catch (e) { /* Asaas check failed */ }
+        }
+        // Fallback: check MP
+        else if (tx.mpPaymentId && tx.mpStatus !== 'simulation' && MP_TOKEN && tx.status !== 'paid') {
             try {
                 var mpResult = await checkMPPayment(tx.mpPaymentId);
                 if (mpResult.status === 'approved' && tx.status !== 'paid') {
@@ -268,14 +333,16 @@ router.get('/:id/status', validateId('id'), authMiddleware, async (req, res) => 
                     await tx.save();
                     await creditAgentCommission(tx);
                 }
-            } catch (e) { /* MP check failed, return current status */ }
+            } catch (e) { /* MP check failed */ }
         }
 
         res.json({
             status: tx.status,
-            mpStatus: tx.mpStatus,
+            asaasStatus: tx.asaasStatus || null,
+            mpStatus: tx.mpStatus || null,
             amount: tx.totalAmount,
-            paidAt: tx.paidAt
+            paidAt: tx.paidAt,
+            provider: tx.asaasPaymentId ? 'asaas' : (tx.mpPaymentId ? 'mercadopago' : 'simulation')
         });
     } catch (e) {
         res.status(500).json({ error: 'Erro ao checar status' });
@@ -332,6 +399,53 @@ router.post('/:id/confirm', validateId('id'), authMiddleware, async (req, res) =
         });
     } catch (e) {
         res.status(500).json({ error: 'Erro ao confirmar' });
+    }
+});
+
+// ===== POST /api/payments/webhook/asaas — Webhook Asaas =====
+router.post('/webhook/asaas', express.json(), async (req, res) => {
+    try {
+        var event = req.body;
+        // Asaas envia: { event: "PAYMENT_RECEIVED", payment: { id, status, value, ... } }
+        if (!event || !event.event || !event.payment) {
+            return res.sendStatus(200);
+        }
+
+        var paymentId = event.payment.id;
+        var status = event.payment.status;
+
+        if (['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'].includes(status)) {
+            var tx = await PaymentTransaction.findOne({ asaasPaymentId: paymentId });
+            if (tx && tx.status !== 'paid') {
+                tx.status = 'paid';
+                tx.asaasStatus = status;
+                tx.paidAt = new Date();
+                await tx.save();
+                await creditAgentCommission(tx);
+                await updatePaymentScore(tx);
+                console.log('[ASAAS] Pagamento confirmado: R$' + tx.totalAmount + ' (taxa: R$' + tx.feeAmount + ')');
+
+                // Notificações
+                try {
+                    await Notification.create({
+                        user: tx.owner, type: 'payment_received',
+                        title: 'Pagamento recebido',
+                        message: tx.tenantName + ' pagou R$' + tx.ownerReceives.toFixed(2) + ' ref. ' + tx.month,
+                        metadata: { paymentTransactionId: tx._id, rentalId: tx.rental, month: tx.month }
+                    });
+                    // Email pro inquilino
+                    var tenantUser = await User.findById(tx.tenant);
+                    if (tenantUser) {
+                        emailService.sendPaymentConfirmedEmail(tenantUser.email, tenantUser.name, tx.totalAmount, 'Aluguel ref. ' + tx.month);
+                    }
+                } catch (notifErr) { console.error('Asaas webhook notification error:', notifErr.message); }
+            }
+        }
+
+        res.sendStatus(200);
+    } catch (e) {
+        console.error('[ASAAS] Webhook error:', e.message);
+        res.sendStatus(500);
     }
 });
 

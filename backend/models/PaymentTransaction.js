@@ -13,8 +13,10 @@ const paymentTransactionSchema = new mongoose.Schema({
     feeAmount: { type: Number }, // taxa MoraJunto
     totalAmount: { type: Number }, // total que inquilino paga
     ownerReceives: { type: Number }, // o que proprietário recebe
-    mpPaymentId: { type: String }, // ID do pagamento no Mercado Pago
-    mpStatus: { type: String, default: 'pending' }, // pending, approved, rejected, simulation, manual_confirm
+    mpPaymentId: { type: String }, // ID do pagamento no Mercado Pago (legado)
+    mpStatus: { type: String, default: 'pending' },
+    asaasPaymentId: { type: String }, // ID da cobrança no Asaas
+    asaasStatus: { type: String }, // PENDING, RECEIVED, CONFIRMED, OVERDUE
     pixQrCode: { type: String },
     pixQrCodeBase64: { type: String },
     status: { type: String, enum: ['pending', 'paid', 'failed', 'refunded'], default: 'pending' },
