@@ -343,6 +343,10 @@ button {
 .nav-user-dropdown a:hover {
   background: var(--bg-alt);
 }
+.nav-user-dropdown a:nth-last-child(2) {
+  color: var(--coral);
+  font-size: .82rem;
+}
 .nav-user-dropdown a:last-child {
   border-top: 1px solid var(--border);
   color: var(--coral);

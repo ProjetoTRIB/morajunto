@@ -567,4 +567,41 @@ router.get('/fb-token', function(req, res) {
     res.json({ token: token });
 });
 
+// DELETE /api/auth/delete-account — excluir conta permanentemente (LGPD)
+router.delete('/delete-account', authMiddleware, async function(req, res) {
+    try {
+        var { password } = req.body;
+        if (!password) {
+            return res.status(400).json({ error: 'Senha é obrigatória para confirmar exclusão' });
+        }
+
+        var user = await User.findById(req.user.userId);
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+        if (user.role === 'admin') {
+            return res.status(403).json({ error: 'Contas admin não podem ser excluídas por esta rota' });
+        }
+
+        var valid = await bcrypt.compare(password, user.password);
+        if (!valid) {
+            return res.status(401).json({ error: 'Senha incorreta' });
+        }
+
+        // Remover dados relacionados
+        var Property = require('../models/Property');
+        var Lead = require('../models/Lead');
+        var Notification = require('../models/Notification');
+
+        await Property.deleteMany({ agency: user._id });
+        await Lead.deleteMany({ agency: user._id });
+        await Notification.deleteMany({ user: user._id });
+        await User.findByIdAndDelete(user._id);
+
+        res.json({ message: 'Conta excluída com sucesso. Seus dados foram removidos.' });
+    } catch (e) {
+        console.error('Delete account error:', e.message);
+        res.status(500).json({ error: 'Erro ao excluir conta' });
+    }
+});
+
 module.exports = router;

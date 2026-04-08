@@ -147,6 +147,10 @@
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1 4 3 6 3s6-2 6-3v-5"/></svg>
                             Painel Imobiliária
                         </a>
+                        <a href="#" onclick="event.preventDefault();closeUserDropdown();deleteMyAccount()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                            Excluir minha conta
+                        </a>
                         <a href="#" onclick="event.preventDefault();logout();closeUserDropdown()">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                             Sair
@@ -3207,7 +3211,17 @@
                 </ul>
                 <p><strong>Penalidades:</strong> Usuários que negociarem fora da Plataforma poderão ter suas contas suspensas permanentemente, sem aviso prévio.</p>
 
-                <h2 class="legal-heading">6. Limitação de Responsabilidade</h2>
+                <h2 class="legal-heading">6. Taxa de Serviço e Pagamentos</h2>
+                <p>A plataforma cobra uma <strong>taxa de serviço de 8% (oito por cento)</strong> sobre o valor do aluguel mensal, paga pelo inquilino. O proprietário recebe o valor integral do aluguel acordado.</p>
+                <ul class="legal-list">
+                    <li>A taxa é cobrada mensalmente junto com o pagamento do aluguel via Mercado Pago (PIX)</li>
+                    <li>O MoraJunto atua como <strong>intermediador de pagamento</strong>, repassando o valor do aluguel ao proprietário após confirmação</li>
+                    <li>Não há cobrança para criação de conta, busca de imóveis ou match de roommates</li>
+                    <li>Comissões de agentes e imobiliárias são calculadas separadamente conforme tier do agente</li>
+                    <li>Pagamentos são processados exclusivamente via Mercado Pago. O MoraJunto não armazena dados de cartão</li>
+                </ul>
+
+                <h2 class="legal-heading">7. Limitação de Responsabilidade</h2>
                 <p>O MoraJunto <strong>não se responsabiliza por:</strong></p>
                 <ul class="legal-list">
                     <li>Acordos, contratos ou combinados firmados entre usuários</li>
@@ -3219,19 +3233,19 @@
                 </ul>
                 <p>A Plataforma é um meio de conexão. Toda e qualquer decisão de moradia, financeira ou contratual é de <strong>exclusiva responsabilidade dos usuários envolvidos</strong>.</p>
 
-                <h2 class="legal-heading">7. Propriedade Intelectual</h2>
+                <h2 class="legal-heading">8. Propriedade Intelectual</h2>
                 <p>Todo o conteúdo da Plataforma (marca, design, código, textos, ícones) é de propriedade do MoraJunto e protegido pela legislação brasileira de propriedade intelectual. É proibida a reprodução, distribuição ou uso comercial sem autorização expressa.</p>
 
-                <h2 class="legal-heading">8. Suspensão e Encerramento</h2>
-                <p>O MoraJunto reserva-se o direito de suspender ou encerrar contas que violem estes Termos, sem aviso prévio. O usuário pode solicitar o encerramento de sua conta a qualquer momento.</p>
+                <h2 class="legal-heading">9. Suspensão e Encerramento</h2>
+                <p>O MoraJunto reserva-se o direito de suspender ou encerrar contas que violem estes Termos, sem aviso prévio. O usuário pode solicitar o encerramento de sua conta a qualquer momento através do botão "Excluir minha conta" disponível no perfil.</p>
 
-                <h2 class="legal-heading">9. Alterações nos Termos</h2>
+                <h2 class="legal-heading">10. Alterações nos Termos</h2>
                 <p>Estes Termos podem ser alterados a qualquer momento. Alterações significativas serão comunicadas por email ou notificação na Plataforma. O uso continuado após alterações constitui aceitação.</p>
 
-                <h2 class="legal-heading">10. Legislação Aplicável e Foro</h2>
+                <h2 class="legal-heading">11. Legislação Aplicável e Foro</h2>
                 <p>Estes Termos são regidos pelas leis da República Federativa do Brasil. Fica eleito o Foro da Comarca de Ribeirão Preto - SP para dirimir quaisquer controvérsias.</p>
 
-                <h2 class="legal-heading">11. Contato</h2>
+                <h2 class="legal-heading">12. Contato</h2>
                 <p>Em caso de dúvidas sobre estes Termos, entre em contato pelo email: <strong>contatomorajunto@gmail.com</strong></p>
             </div>
         </div>
@@ -3253,7 +3267,9 @@
                 <ul class="legal-list">
                     <li><strong>Dados de cadastro:</strong> nome completo, email, CPF, data de nascimento, gênero, telefone</li>
                     <li><strong>Dados de perfil:</strong> ocupação, universidade, curso, bio, preferências de moradia, estilo de vida (hábitos de limpeza, horários, etc.)</li>
-                    <li><strong>Dados de verificação:</strong> URLs de perfis de Instagram e/ou Facebook</li>
+                    <li><strong>Dados de verificação social:</strong> URLs de perfis de Instagram e/ou Facebook</li>
+                    <li><strong>Dados de verificação de identidade:</strong> selfie e foto de documento de identificação (armazenados em servidor seguro Cloudinary)</li>
+                    <li><strong>Dados de pagamento:</strong> histórico de transações de aluguel, valores pagos, status de pagamento. Dados de cartão são processados exclusivamente pelo Mercado Pago e NÃO são armazenados pela Plataforma</li>
                     <li><strong>Dados de uso:</strong> interações na plataforma, conexões, mensagens em grupos</li>
                     <li><strong>Dados técnicos:</strong> endereço IP, tipo de dispositivo, navegador</li>
                 </ul>

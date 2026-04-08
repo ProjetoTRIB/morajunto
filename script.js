@@ -526,6 +526,30 @@ function logout() {
     showPage('home');
 }
 
+async function deleteMyAccount() {
+    if (!confirm('ATENÇÃO: Esta ação é irreversível!\n\nTodos os seus dados serão excluídos permanentemente:\n- Perfil e informações pessoais\n- Imóveis cadastrados\n- Histórico de mensagens\n- Verificações\n\nDeseja continuar?')) return;
+
+    var password = prompt('Para confirmar, digite sua senha:');
+    if (!password) return;
+
+    try {
+        var res = await fetch(API + '/auth/delete-account', {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: password })
+        });
+        var data = await res.json();
+        if (res.ok) {
+            alert('Conta excluída com sucesso. Seus dados foram removidos conforme a LGPD.');
+            logout();
+        } else {
+            showToast(data.error || 'Erro ao excluir conta', 'error');
+        }
+    } catch {
+        showToast('Erro ao excluir conta', 'error');
+    }
+}
+
 function toggleUserDropdown() {
     var dd = document.getElementById('navUserDropdown');
     if (dd) dd.classList.toggle('open');
