@@ -23,7 +23,7 @@ const PHOTOS = {
     ],
     kitnet: [
         'https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=800&h=500&fit=crop',
-        'https://images.unsplash.com/photo-1598928506311-c55ez637b483?w=800&h=500&fit=crop',
+        'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&h=500&fit=crop',
     ],
     casa: [
         'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=500&fit=crop',
