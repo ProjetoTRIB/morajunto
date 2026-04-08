@@ -24,11 +24,13 @@ router.get('/stats', async (req, res) => {
     try {
         var totalProperties = await Property.countDocuments();
         var activeProperties = await Property.countDocuments({ status: 'active' });
-        var totalUsers = await User.countDocuments({ role: 'user' });
+        var totalUsers = await User.countDocuments();
         var totalAgencies = await User.countDocuments({ role: 'agency' });
         var totalLeads = await Lead.countDocuments();
+        var pendingVerifications = await User.countDocuments({ 'identityVerification.status': 'pending' });
+        var ownerLeads = await OwnerLead.countDocuments();
 
-        res.json({ totalProperties, activeProperties, totalUsers, totalAgencies, totalLeads });
+        res.json({ totalProperties, activeProperties, totalUsers, totalAgencies, totalLeads, pendingVerifications, ownerLeads });
     } catch (e) {
         res.status(500).json({ error: 'Erro ao buscar estatísticas' });
     }
@@ -192,6 +194,66 @@ router.put('/owner-leads/:id', validateId('id'), async (req, res) => {
         res.json({ lead });
     } catch (e) {
         res.status(500).json({ error: 'Erro ao atualizar lead' });
+    }
+});
+
+// GET /api/admin/users — listar todos os usuários com filtro
+router.get('/users', async (req, res) => {
+    try {
+        var query = {};
+        if (req.query.role && ['user', 'agency', 'owner', 'admin'].includes(req.query.role)) {
+            query.role = req.query.role;
+        }
+        if (req.query.search) {
+            var s = req.query.search.substring(0, 100);
+            query.$or = [
+                { name: { $regex: s, $options: 'i' } },
+                { email: { $regex: s, $options: 'i' } }
+            ];
+        }
+        var users = await User.find(query)
+            .select('-password -verificationCode')
+            .sort({ createdAt: -1 })
+            .limit(200);
+        res.json({ users });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao listar usuários' });
+    }
+});
+
+// PUT /api/admin/users/:id/role — alterar role do usuário
+router.put('/users/:id/role', validateId('id'), async (req, res) => {
+    try {
+        var { role } = req.body;
+        if (!['user', 'agency', 'owner'].includes(role)) {
+            return res.status(400).json({ error: 'Role inválida' });
+        }
+        var user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select('-password');
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+        res.json({ user });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao alterar role' });
+    }
+});
+
+// PUT /api/admin/users/:id/suspend — suspender/reativar conta
+router.put('/users/:id/suspend', validateId('id'), async (req, res) => {
+    try {
+        var user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+        if (user.role === 'admin') return res.status(403).json({ error: 'Não é possível suspender um admin' });
+
+        var isSuspended = !!user.lockUntil && user.lockUntil > new Date('2099-01-01');
+        if (isSuspended) {
+            user.lockUntil = undefined;
+            user.loginAttempts = 0;
+        } else {
+            user.lockUntil = new Date('2099-12-31');
+        }
+        await user.save();
+        res.json({ message: isSuspended ? 'Conta reativada' : 'Conta suspensa', suspended: !isSuspended });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao suspender/reativar' });
     }
 });
 

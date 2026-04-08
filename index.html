@@ -1390,6 +1390,24 @@
                             <span class="dash-stat-label">Usuários</span>
                         </div>
                     </div>
+                    <div class="dash-stat-card">
+                        <div class="dash-stat-icon dash-stat-icon-amber">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+                        </div>
+                        <div>
+                            <span class="dash-stat-val" id="adminStatVerifications">0</span>
+                            <span class="dash-stat-label">Verificações pendentes</span>
+                        </div>
+                    </div>
+                    <div class="dash-stat-card">
+                        <div class="dash-stat-icon dash-stat-icon-green">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        </div>
+                        <div>
+                            <span class="dash-stat-val" id="adminStatOwnerLeads">0</span>
+                            <span class="dash-stat-label">Leads proprietários</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Admin Tabs -->
@@ -1397,7 +1415,10 @@
                     <button class="dash-tab active" onclick="switchAdminTab('properties')">Imóveis</button>
                     <button class="dash-tab" onclick="switchAdminTab('agencies')">Imobiliárias</button>
                     <button class="dash-tab" onclick="switchAdminTab('leads')">Leads</button>
-                    <button class="dash-tab" onclick="switchAdminTab('referrals')">Indicacoes</button>
+                    <button class="dash-tab" onclick="switchAdminTab('referrals')">Indicações</button>
+                    <button class="dash-tab" onclick="switchAdminTab('users')">Usuários</button>
+                    <button class="dash-tab" onclick="switchAdminTab('verifications')">Verificações</button>
+                    <button class="dash-tab" onclick="switchAdminTab('owner-leads')">Proprietários</button>
                 </div>
 
                 <div class="dash-tab-content active" id="adminTab-properties">
@@ -1489,8 +1510,55 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- Tab: Usuários -->
+                <div class="dash-tab-content" id="adminTab-users">
+                    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+                        <select id="adminUserRoleFilter" onchange="loadAdminUsers()" style="padding:8px 12px;border-radius:var(--radius);background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:.85rem">
+                            <option value="">Todos os roles</option>
+                            <option value="user">Usuário</option>
+                            <option value="agency">Imobiliária</option>
+                            <option value="owner">Proprietário</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        <input type="text" id="adminUserSearch" placeholder="Buscar nome ou email..." onkeydown="if(event.key==='Enter')loadAdminUsers()" style="padding:8px 12px;border-radius:var(--radius);background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:.85rem;flex:1;min-width:200px">
+                        <button class="btn btn-accent btn-sm" onclick="loadAdminUsers()">Buscar</button>
+                    </div>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead><tr><th>Nome</th><th>Email</th><th>CPF</th><th>Role</th><th>Email OK</th><th>Data</th><th>Ações</th></tr></thead>
+                            <tbody id="adminUsersTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab: Verificações -->
+                <div class="dash-tab-content" id="adminTab-verifications">
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead><tr><th>Nome</th><th>Email</th><th>Selfie</th><th>Documento</th><th>Data</th><th>Ações</th></tr></thead>
+                            <tbody id="adminVerificationsTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab: Leads Proprietários -->
+                <div class="dash-tab-content" id="adminTab-owner-leads">
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead><tr><th>Nome</th><th>Email</th><th>WhatsApp</th><th>Bairro</th><th>Tipo</th><th>Preço</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead>
+                            <tbody id="adminOwnerLeadsTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </section>
+    </div>
+
+    <!-- Modal ver imagem (admin) -->
+    <div id="adminImageModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);align-items:center;justify-content:center;cursor:pointer" onclick="this.style.display='none'">
+        <img id="adminImageModalImg" style="max-width:90vw;max-height:90vh;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.5)">
     </div>
 
     <!-- ===== PAGE: ROOMMATE ===== -->

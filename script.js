@@ -1870,10 +1870,12 @@ async function loadAdminPanel() {
         });
         if (res.ok) {
             const stats = await res.json();
-            document.getElementById('adminStatProperties').textContent = stats.properties || 0;
-            document.getElementById('adminStatAgencies').textContent = stats.agencies || 0;
-            document.getElementById('adminStatLeads').textContent = stats.leads || 0;
-            document.getElementById('adminStatUsers').textContent = stats.users || 0;
+            document.getElementById('adminStatProperties').textContent = stats.totalProperties || stats.properties || 0;
+            document.getElementById('adminStatAgencies').textContent = stats.totalAgencies || stats.agencies || 0;
+            document.getElementById('adminStatLeads').textContent = stats.totalLeads || stats.leads || 0;
+            document.getElementById('adminStatUsers').textContent = stats.totalUsers || stats.users || 0;
+            if (document.getElementById('adminStatVerifications')) document.getElementById('adminStatVerifications').textContent = stats.pendingVerifications || 0;
+            if (document.getElementById('adminStatOwnerLeads')) document.getElementById('adminStatOwnerLeads').textContent = stats.ownerLeads || 0;
         }
     } catch {
         console.error('Failed to load admin stats');
@@ -1992,13 +1994,201 @@ function switchAdminTab(tab) {
     document.querySelectorAll('#page-admin .dash-tab-content').forEach(c => c.classList.remove('active'));
 
     const tabs = document.querySelectorAll('#page-admin .dash-tab');
-    const tabMap = { properties: 0, agencies: 1, leads: 2, referrals: 3 };
+    const tabMap = { properties: 0, agencies: 1, leads: 2, referrals: 3, users: 4, verifications: 5, 'owner-leads': 6 };
     if (tabs[tabMap[tab]]) tabs[tabMap[tab]].classList.add('active');
 
     const content = document.getElementById('adminTab-' + tab);
     if (content) content.classList.add('active');
 
     if (tab === 'referrals') loadAdminReferrals('');
+    if (tab === 'users') loadAdminUsers();
+    if (tab === 'verifications') loadAdminVerifications();
+    if (tab === 'owner-leads') loadAdminOwnerLeads();
+}
+
+// ===== ADMIN: USERS TAB =====
+async function loadAdminUsers() {
+    var role = document.getElementById('adminUserRoleFilter') ? document.getElementById('adminUserRoleFilter').value : '';
+    var search = document.getElementById('adminUserSearch') ? document.getElementById('adminUserSearch').value : '';
+    try {
+        var url = API + '/admin/users?role=' + encodeURIComponent(role) + '&search=' + encodeURIComponent(search);
+        var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        if (!res.ok) throw new Error('Failed');
+        var data = await res.json();
+        var users = data.users || [];
+        var tbody = document.getElementById('adminUsersTbody');
+        tbody.innerHTML = users.map(function(u) {
+            var date = u.createdAt ? new Date(u.createdAt).toLocaleDateString('pt-BR') : '-';
+            var isSuspended = u.lockUntil && new Date(u.lockUntil) > new Date('2099-01-01');
+            var roleLabels = { user: 'Usuário', agency: 'Imobiliária', owner: 'Proprietário', admin: 'Admin' };
+            return '<tr>' +
+                '<td><strong>' + escapeHtml(u.name || '') + '</strong></td>' +
+                '<td>' + escapeHtml(u.email || '') + '</td>' +
+                '<td>' + escapeHtml(u.cpf || '-') + '</td>' +
+                '<td><select onchange="adminChangeRole(\'' + u._id + '\',this.value)" style="padding:4px 8px;border-radius:6px;background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:.8rem">' +
+                    '<option value="user"' + (u.role === 'user' ? ' selected' : '') + '>Usuário</option>' +
+                    '<option value="agency"' + (u.role === 'agency' ? ' selected' : '') + '>Imobiliária</option>' +
+                    '<option value="owner"' + (u.role === 'owner' ? ' selected' : '') + '>Proprietário</option>' +
+                '</select></td>' +
+                '<td>' + (u.emailVerified ? '<span class="status-badge status-active">Sim</span>' : '<span class="status-badge status-pending">Não</span>') + '</td>' +
+                '<td>' + date + '</td>' +
+                '<td>' +
+                    (u.role !== 'admin' ? '<button class="btn btn-outline btn-sm" style="font-size:.75rem;' + (isSuspended ? 'color:var(--green);border-color:var(--green)' : 'color:var(--coral);border-color:var(--coral)') + '" onclick="adminSuspendUser(\'' + u._id + '\')">' + (isSuspended ? 'Reativar' : 'Suspender') + '</button>' : '<span style="color:var(--text-muted);font-size:.8rem">Admin</span>') +
+                '</td></tr>';
+        }).join('');
+        if (!users.length) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Nenhum usuário encontrado</td></tr>';
+    } catch (e) {
+        document.getElementById('adminUsersTbody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Erro ao carregar</td></tr>';
+    }
+}
+
+async function adminChangeRole(userId, newRole) {
+    try {
+        var res = await fetch(API + '/admin/users/' + userId + '/role', {
+            method: 'PUT',
+            headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: newRole })
+        });
+        if (res.ok) showToast('Role alterada com sucesso', 'success');
+        else showToast('Erro ao alterar role', 'error');
+    } catch { showToast('Erro ao alterar role', 'error'); }
+}
+
+async function adminSuspendUser(userId) {
+    if (!confirm('Confirma suspender/reativar esta conta?')) return;
+    try {
+        var res = await fetch(API + '/admin/users/' + userId + '/suspend', {
+            method: 'PUT',
+            headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        var data = await res.json();
+        if (res.ok) { showToast(data.message, 'success'); loadAdminUsers(); }
+        else showToast(data.error || 'Erro', 'error');
+    } catch { showToast('Erro ao suspender/reativar', 'error'); }
+}
+
+// ===== ADMIN: VERIFICATIONS TAB =====
+async function loadAdminVerifications() {
+    try {
+        var res = await fetch(API + '/admin/verifications', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        if (!res.ok) throw new Error('Failed');
+        var data = await res.json();
+        var verifications = data.verifications || [];
+        var tbody = document.getElementById('adminVerificationsTbody');
+        tbody.innerHTML = verifications.map(function(v) {
+            var date = v.identityVerification && v.identityVerification.submittedAt ? new Date(v.identityVerification.submittedAt).toLocaleDateString('pt-BR') : '-';
+            var selfie = v.identityVerification && v.identityVerification.selfieUrl ? v.identityVerification.selfieUrl : '';
+            var doc = v.identityVerification && v.identityVerification.documentUrl ? v.identityVerification.documentUrl : '';
+            return '<tr>' +
+                '<td><strong>' + escapeHtml(v.name || '') + '</strong></td>' +
+                '<td>' + escapeHtml(v.email || '') + '</td>' +
+                '<td>' + (selfie ? '<img src="' + selfie + '" style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border)" onclick="event.stopPropagation();adminShowImage(\'' + selfie + '\')">' : '-') + '</td>' +
+                '<td>' + (doc ? '<img src="' + doc + '" style="width:50px;height:50px;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid var(--border)" onclick="event.stopPropagation();adminShowImage(\'' + doc + '\')">' : '-') + '</td>' +
+                '<td>' + date + '</td>' +
+                '<td style="display:flex;gap:6px">' +
+                    '<button class="btn btn-sm" style="background:var(--green);color:#fff;font-size:.75rem" onclick="adminApproveVerification(\'' + v._id + '\')">Aprovar</button>' +
+                    '<button class="btn btn-outline btn-sm" style="color:var(--coral);border-color:var(--coral);font-size:.75rem" onclick="adminRejectVerification(\'' + v._id + '\')">Rejeitar</button>' +
+                '</td></tr>';
+        }).join('');
+        if (!verifications.length) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Nenhuma verificação pendente</td></tr>';
+    } catch {
+        document.getElementById('adminVerificationsTbody').innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted)">Erro ao carregar</td></tr>';
+    }
+}
+
+function adminShowImage(url) {
+    var modal = document.getElementById('adminImageModal');
+    document.getElementById('adminImageModalImg').src = url;
+    modal.style.display = 'flex';
+}
+
+async function adminApproveVerification(userId) {
+    if (!confirm('Aprovar verificação de identidade?')) return;
+    try {
+        var res = await fetch(API + '/admin/verifications/' + userId, {
+            method: 'PUT',
+            headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'approve' })
+        });
+        if (res.ok) { showToast('Identidade aprovada!', 'success'); loadAdminVerifications(); loadAdminPanel(); }
+        else showToast('Erro ao aprovar', 'error');
+    } catch { showToast('Erro ao aprovar', 'error'); }
+}
+
+async function adminRejectVerification(userId) {
+    var reason = prompt('Motivo da rejeição (opcional):');
+    if (reason === null) return;
+    try {
+        var res = await fetch(API + '/admin/verifications/' + userId, {
+            method: 'PUT',
+            headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'reject', reason: reason })
+        });
+        if (res.ok) { showToast('Verificação rejeitada', 'success'); loadAdminVerifications(); loadAdminPanel(); }
+        else showToast('Erro ao rejeitar', 'error');
+    } catch { showToast('Erro ao rejeitar', 'error'); }
+}
+
+// ===== ADMIN: OWNER LEADS TAB =====
+async function loadAdminOwnerLeads() {
+    try {
+        var res = await fetch(API + '/admin/owner-leads', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        if (!res.ok) throw new Error('Failed');
+        var data = await res.json();
+        var leads = data.leads || [];
+        var tbody = document.getElementById('adminOwnerLeadsTbody');
+        var statusLabels = { pending: 'Pendente', contacted: 'Contatado', converted: 'Convertido', rejected: 'Rejeitado' };
+        var statusClasses = { pending: 'status-pending', contacted: 'status-active', converted: 'status-active', rejected: 'status-inactive' };
+        tbody.innerHTML = leads.map(function(l) {
+            var date = l.createdAt ? new Date(l.createdAt).toLocaleDateString('pt-BR') : '-';
+            return '<tr>' +
+                '<td><strong>' + escapeHtml(l.name || '') + '</strong></td>' +
+                '<td>' + escapeHtml(l.email || '') + '</td>' +
+                '<td>' + escapeHtml(l.phone || '-') + '</td>' +
+                '<td>' + escapeHtml(l.neighborhood || '-') + '</td>' +
+                '<td>' + escapeHtml(l.propertyType || '-') + '</td>' +
+                '<td>' + (l.price ? formatPrice(l.price) : '-') + '</td>' +
+                '<td><select onchange="adminUpdateOwnerLead(\'' + l._id + '\',this.value)" style="padding:4px 8px;border-radius:6px;background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:.8rem">' +
+                    '<option value="pending"' + (l.status === 'pending' ? ' selected' : '') + '>Pendente</option>' +
+                    '<option value="contacted"' + (l.status === 'contacted' ? ' selected' : '') + '>Contatado</option>' +
+                    '<option value="converted"' + (l.status === 'converted' ? ' selected' : '') + '>Convertido</option>' +
+                    '<option value="rejected"' + (l.status === 'rejected' ? ' selected' : '') + '>Rejeitado</option>' +
+                '</select></td>' +
+                '<td>' + date + '</td>' +
+                '<td><button class="btn btn-outline btn-sm" style="font-size:.75rem" onclick="adminAddOwnerLeadNote(\'' + l._id + '\')">Nota</button></td>' +
+                '</tr>';
+        }).join('');
+        if (!leads.length) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted)">Nenhum lead de proprietário</td></tr>';
+    } catch {
+        document.getElementById('adminOwnerLeadsTbody').innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted)">Erro ao carregar</td></tr>';
+    }
+}
+
+async function adminUpdateOwnerLead(id, status) {
+    try {
+        var res = await fetch(API + '/admin/owner-leads/' + id, {
+            method: 'PUT',
+            headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: status })
+        });
+        if (res.ok) showToast('Status atualizado', 'success');
+        else showToast('Erro ao atualizar', 'error');
+    } catch { showToast('Erro ao atualizar', 'error'); }
+}
+
+async function adminAddOwnerLeadNote(id) {
+    var notes = prompt('Adicionar nota ao lead:');
+    if (notes === null) return;
+    try {
+        var res = await fetch(API + '/admin/owner-leads/' + id, {
+            method: 'PUT',
+            headers: { 'Authorization': 'Bearer ' + currentToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'contacted', notes: notes })
+        });
+        if (res.ok) { showToast('Nota adicionada', 'success'); loadAdminOwnerLeads(); }
+        else showToast('Erro', 'error');
+    } catch { showToast('Erro', 'error'); }
 }
 
 // ===== FORMAT HELPERS =====
