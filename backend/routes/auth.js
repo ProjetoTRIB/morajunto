@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 const authMiddleware = require('../middleware/auth');
 const connectDB = require('../config/db');
+const emailService = require('../services/emailService');
 
 function requireDB(req, res, next) {
     if (!connectDB.isConnected()) return res.status(503).json({ error: 'Banco de dados não disponível.' });
@@ -124,6 +126,11 @@ router.post('/register', async (req, res) => {
         }
 
         var hash = await bcrypt.hash(password, 10);
+
+        // Gerar código de verificação de 6 dígitos
+        var verificationCode = crypto.randomInt(100000, 999999).toString();
+        var verificationExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 min
+
         var user = await User.create({
             name: name.trim().replace(/<[^>]*>/g, ''),
             email: email.toLowerCase().trim(),
@@ -134,7 +141,9 @@ router.post('/register', async (req, res) => {
             birthDate: birth,
             gender: gender || '',
             profilePhoto: (profilePhoto || '').trim(),
-            emailVerified: true
+            emailVerified: false,
+            verificationCode: verificationCode,
+            verificationExpires: verificationExpires
         });
 
         // Handle referral code for agency users
@@ -147,10 +156,15 @@ router.post('/register', async (req, res) => {
             } catch (e) { console.error('Referral error:', e.message); }
         }
 
+        // Enviar email de verificação (não bloqueia o registro se falhar)
+        emailService.sendVerificationEmail(user.email, user.name, verificationCode);
+
         var token = generateToken(user);
         res.status(201).json({
             token,
-            user: { id: user._id, name: user.name, email: user.email, role: user.role, phone: user.phone, cpf: user.cpf, gender: user.gender }
+            user: { id: user._id, name: user.name, email: user.email, role: user.role, phone: user.phone, cpf: user.cpf, gender: user.gender },
+            emailVerified: false,
+            message: 'Conta criada! Verifique seu email para confirmar.'
         });
     } catch (e) {
         console.error('Register error:', e.message);
@@ -305,6 +319,71 @@ router.post('/admin/seed', async (req, res) => {
     }
 });
 
+// ===== EMAIL VERIFICATION =====
+
+// POST /api/auth/verify-email — confirmar email com código
+router.post('/verify-email', authMiddleware, async function(req, res) {
+    try {
+        var { code } = req.body;
+        if (!code || typeof code !== 'string') {
+            return res.status(400).json({ error: 'Código de verificação é obrigatório' });
+        }
+
+        var user = await User.findById(req.user.userId);
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+        if (user.emailVerified) {
+            return res.json({ message: 'Email já verificado', emailVerified: true });
+        }
+
+        if (!user.verificationCode || !user.verificationExpires) {
+            return res.status(400).json({ error: 'Nenhum código pendente. Solicite um novo.' });
+        }
+
+        if (user.verificationExpires < new Date()) {
+            return res.status(400).json({ error: 'Código expirado. Solicite um novo.' });
+        }
+
+        if (user.verificationCode !== code.trim()) {
+            return res.status(400).json({ error: 'Código incorreto' });
+        }
+
+        user.emailVerified = true;
+        user.verificationCode = undefined;
+        user.verificationExpires = undefined;
+        await user.save();
+
+        res.json({ message: 'Email verificado com sucesso!', emailVerified: true });
+    } catch (e) {
+        console.error('Verify email error:', e.message);
+        res.status(500).json({ error: 'Erro ao verificar email' });
+    }
+});
+
+// POST /api/auth/resend-code — reenviar código de verificação
+router.post('/resend-code', authMiddleware, async function(req, res) {
+    try {
+        var user = await User.findById(req.user.userId);
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+        if (user.emailVerified) {
+            return res.json({ message: 'Email já verificado' });
+        }
+
+        var verificationCode = crypto.randomInt(100000, 999999).toString();
+        user.verificationCode = verificationCode;
+        user.verificationExpires = new Date(Date.now() + 30 * 60 * 1000);
+        await user.save();
+
+        await emailService.sendVerificationEmail(user.email, user.name, verificationCode);
+
+        res.json({ message: 'Código reenviado para ' + user.email });
+    } catch (e) {
+        console.error('Resend code error:', e.message);
+        res.status(500).json({ error: 'Erro ao reenviar código' });
+    }
+});
+
 // ===== INSTAGRAM HANDLE VERIFICATION =====
 router.post('/verify-instagram', authMiddleware, async function(req, res) {
     try {
@@ -327,7 +406,6 @@ router.post('/verify-instagram', authMiddleware, async function(req, res) {
 
 // ===== FACEBOOK OAUTH =====
 var https = require('https');
-var crypto = require('crypto');
 
 // In-memory store for OAuth state tokens (use Redis in production for multi-instance)
 var oauthStates = new Map();

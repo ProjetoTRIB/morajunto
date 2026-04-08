@@ -1,14 +1,22 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const User = require('../models/User');
 const Property = require('../models/Property');
 const Rental = require('../models/Rental');
 const OwnerLead = require('../models/OwnerLead');
+const OwnerNotification = require('../models/OwnerNotification');
 const authMiddleware = require('../middleware/auth');
 const { getLocationData } = require('../services/geolocation');
 const { recalcAgentTier, creditBonus } = require('../services/commissionService');
 const rateLimit = require('express-rate-limit');
 const { validateId } = require('../middleware/validateId');
+const { createStorage } = require('../config/cloudinary');
+
+var propertyUpload = multer({
+    storage: createStorage('morajunto/properties'),
+    limits: { fileSize: 5 * 1024 * 1024 }
+});
 
 // Rate limiter para leads de proprietários (5 por IP a cada 15min)
 var ownerLeadLimiter = rateLimit({
@@ -216,9 +224,9 @@ router.post('/properties', async (req, res) => {
                         longitude: loc.longitude,
                         nearbyPOIs: loc.nearbyPOIs,
                         nearbyUpdatedAt: new Date()
-                    }).catch(function() {});
+                    }).catch(function(err) { console.error('Geocoding update error:', err.message); });
                 }
-            }).catch(function() {});
+            }).catch(function(err) { console.error('Geocoding fetch error:', err.message); });
         }
 
         res.status(201).json({ property });
@@ -263,6 +271,29 @@ router.delete('/properties/:id', validateId('id'), async (req, res) => {
     }
 });
 
+// POST /api/owner/properties/:id/images — upload de imagens do imóvel
+router.post('/properties/:id/images', validateId('id'), propertyUpload.array('images', 10), async (req, res) => {
+    try {
+        var property = await Property.findOne({ _id: req.params.id, agency: req.user.userId });
+        if (!property) return res.status(404).json({ error: 'Imóvel não encontrado' });
+
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: 'Envie pelo menos uma imagem' });
+        }
+
+        var newUrls = req.files.map(function(f) { return f.path || f.secure_url || f.url; });
+        if (!property.images) property.images = [];
+        if (!property.photos) property.photos = [];
+        property.images = property.images.concat(newUrls).slice(0, 20);
+        property.photos = property.images;
+        await property.save();
+
+        res.json({ images: property.images, message: newUrls.length + ' imagem(ns) enviada(s)' });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao enviar imagens' });
+    }
+});
+
 // POST /api/owner/rentals — criar aluguel (vincular inquilinos a um imóvel)
 router.post('/rentals', async (req, res) => {
     try {
@@ -279,13 +310,24 @@ router.post('/rentals', async (req, res) => {
         if (!property) return res.status(404).json({ error: 'Imóvel não encontrado' });
 
         var tenants = [];
+        var notFoundEmails = [];
+        var seenIds = new Set();
         for (var email of tenantEmails) {
-            var user = await User.findOne({ email: email.toLowerCase().trim() });
-            if (user) tenants.push(user._id);
+            var normalizedEmail = email.toLowerCase().trim();
+            var user = await User.findOne({ email: normalizedEmail });
+            if (user) {
+                var idStr = user._id.toString();
+                if (!seenIds.has(idStr)) {
+                    seenIds.add(idStr);
+                    tenants.push(user._id);
+                }
+            } else {
+                notFoundEmails.push(normalizedEmail);
+            }
         }
 
         if (tenants.length === 0) {
-            return res.status(400).json({ error: 'Nenhum inquilino válido encontrado' });
+            return res.status(400).json({ error: 'Nenhum inquilino válido encontrado', notFoundEmails: notFoundEmails });
         }
 
         var feeRate = 0.08;
@@ -325,7 +367,7 @@ router.post('/rentals', async (req, res) => {
             }
         } catch (e) { console.error('Agent rewards rental error:', e.message); }
 
-        res.status(201).json({
+        var response = {
             rental,
             summary: {
                 aluguel: property.price,
@@ -334,7 +376,11 @@ router.post('/rentals', async (req, res) => {
                 porPessoa: perTenant,
                 inquilinos: tenants.length
             }
-        });
+        };
+        if (notFoundEmails.length > 0) {
+            response.warnings = ['Emails não encontrados: ' + notFoundEmails.join(', ')];
+        }
+        res.status(201).json(response);
     } catch (e) {
         res.status(500).json({ error: 'Erro ao criar aluguel' });
     }
@@ -396,6 +442,41 @@ router.post('/rentals/:id/generate-payments', validateId('id'), async (req, res)
         res.json({ message: 'Cobranças geradas para ' + month, payments: rental.payments.filter(p => p.month === month) });
     } catch (e) {
         res.status(500).json({ error: 'Erro ao gerar cobranças' });
+    }
+});
+
+// GET /api/owner/notifications — notificações do proprietário
+router.get('/notifications', async (req, res) => {
+    try {
+        var notifications = await OwnerNotification.find({ owner: req.user.userId })
+            .sort({ createdAt: -1 })
+            .limit(50);
+        res.json({ notifications });
+    } catch (e) {
+        res.json({ notifications: [] });
+    }
+});
+
+// POST /api/owner/notifications/read — marcar todas como lidas
+router.post('/notifications/read', async (req, res) => {
+    try {
+        await OwnerNotification.updateMany(
+            { owner: req.user.userId, read: false },
+            { read: true }
+        );
+        res.json({ message: 'ok' });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao marcar notificações' });
+    }
+});
+
+// GET /api/owner/notifications/unread-count — contagem de não lidas
+router.get('/notifications/unread-count', async (req, res) => {
+    try {
+        var count = await OwnerNotification.countDocuments({ owner: req.user.userId, read: false });
+        res.json({ count });
+    } catch (e) {
+        res.json({ count: 0 });
     }
 });
 

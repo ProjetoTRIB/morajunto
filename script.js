@@ -171,6 +171,8 @@ function showPage(page, scrollTo) {
     } else if (page === 'referral') {
         loadMyReferrals();
         if (typeof loadReferralPix === 'function') loadReferralPix();
+    } else if (page === 'owners-landing') {
+        if (typeof calcOwnerRevenue === 'function') calcOwnerRevenue();
     }
 
     closeMobileMenu();
@@ -234,10 +236,13 @@ function updateNavAuth(loggedIn) {
     const navReferral = document.getElementById('navReferral');
 
     if (loggedIn && currentUser) {
-        // Show referral and chat for all logged-in users
+        // Show referral, chat and notifications for all logged-in users
         if (navReferral) navReferral.classList.remove('hidden');
         if (navChat) navChat.classList.remove('hidden');
         if (navChatMobile) navChatMobile.classList.remove('hidden');
+        var navNotif = document.getElementById('navNotifications');
+        if (navNotif) navNotif.classList.remove('hidden');
+        if (typeof loadNotifCount === 'function') loadNotifCount();
         var bottomChat = document.getElementById('bottomNavChat');
         if (bottomChat) bottomChat.style.display = '';
 
@@ -287,6 +292,8 @@ function updateNavAuth(loggedIn) {
         if (navReferral) navReferral.classList.add('hidden');
         if (navChat) navChat.classList.add('hidden');
         if (navChatMobile) navChatMobile.classList.add('hidden');
+        var navNotifOff = document.getElementById('navNotifications');
+        if (navNotifOff) navNotifOff.classList.add('hidden');
     }
 }
 
@@ -593,6 +600,34 @@ function animateStatsOnScroll() {
             revealObserver.observe(el);
         }
     });
+
+    // CountUp animation for number values
+    var countUpObserver = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                var el = entry.target;
+                var target = parseInt(el.getAttribute('data-countup')) || 0;
+                var prefix = el.getAttribute('data-prefix') || '';
+                var suffix = el.getAttribute('data-suffix') || '';
+                var duration = 1500;
+                var startTime = null;
+                function step(timestamp) {
+                    if (!startTime) startTime = timestamp;
+                    var progress = Math.min((timestamp - startTime) / duration, 1);
+                    var eased = 1 - Math.pow(1 - progress, 3);
+                    var current = Math.floor(eased * target);
+                    el.textContent = prefix + current + suffix;
+                    if (progress < 1) requestAnimationFrame(step);
+                }
+                requestAnimationFrame(step);
+                countUpObserver.unobserve(el);
+            }
+        });
+    }, { threshold: 0.3 });
+
+    document.querySelectorAll('[data-countup]').forEach(function(el) {
+        countUpObserver.observe(el);
+    });
 }
 
 // ===== FEATURED PROPERTIES =====
@@ -605,9 +640,10 @@ async function loadFeaturedProperties() {
         if (!res.ok) throw new Error('Failed');
         const data = await res.json();
         const properties = data.properties || data || [];
+        if (properties.length === 0) throw new Error('Empty');
         renderPropertyCards(properties.slice(0, 6), 'featuredGrid');
     } catch {
-        // Show demo data on error
+        // Show demo data on error or empty results
         renderPropertyCards(getDemoProperties(), 'featuredGrid');
     }
 }
@@ -862,7 +898,7 @@ function renderPropertyDetail(p) {
 
     // Cost calculator
     const rent = p.price || 0;
-    const condo = p.condo || 0;
+    const condo = p.condominio || 0;
     const iptu = p.iptu || 0;
     const utilities = 350;
 
@@ -1656,8 +1692,9 @@ async function saveProperty(e) {
     clearFormFeedback('propertyFeedback');
 
     const editId = document.getElementById('editPropertyId').value;
-    const imagesText = document.getElementById('propImages').value;
-    const images = imagesText.split('\n').map(s => s.trim()).filter(Boolean);
+    const imagesTextEl = document.getElementById('propImages');
+    const imagesText = imagesTextEl ? imagesTextEl.value : '';
+    const urlImages = imagesText.split('\n').map(s => s.trim()).filter(Boolean);
     const featuresText = document.getElementById('propFeatures').value;
     const features = featuresText.split(',').map(s => s.trim()).filter(Boolean);
 
@@ -1677,7 +1714,7 @@ async function saveProperty(e) {
         zip: document.getElementById('propZip').value,
         description: document.getElementById('propDescription').value,
         features,
-        images
+        images: urlImages
     };
 
     try {
@@ -1697,6 +1734,33 @@ async function saveProperty(e) {
             const data = await res.json();
             showFormFeedback('propertyFeedback', data.message || 'Erro ao salvar', 'error');
             return;
+        }
+
+        const result = await res.json();
+        const propertyId = editId || (result.property && (result.property._id || result.property.id));
+
+        // Upload file images if selected
+        const fileInput = document.getElementById('propImageFiles');
+        if (fileInput && fileInput.files.length > 0 && propertyId) {
+            var formData = new FormData();
+            for (var i = 0; i < Math.min(fileInput.files.length, 10); i++) {
+                formData.append('images', fileInput.files[i]);
+            }
+            try {
+                var uploadRes = await fetch(API + '/owner/properties/' + propertyId + '/images', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + currentToken },
+                    body: formData
+                });
+                if (!uploadRes.ok) {
+                    var uploadData = await uploadRes.json();
+                    showFormFeedback('propertyFeedback', 'Imóvel salvo, mas erro no upload: ' + (uploadData.error || 'Erro'), 'error');
+                    return;
+                }
+            } catch (uploadErr) {
+                showFormFeedback('propertyFeedback', 'Imóvel salvo, mas falha no upload de imagens.', 'error');
+                return;
+            }
         }
 
         showFormFeedback('propertyFeedback', editId ? 'Imóvel atualizado!' : 'Imóvel cadastrado com sucesso!', 'success');
@@ -1723,7 +1787,7 @@ async function editProperty(id) {
         document.getElementById('propType').value = p.type || '';
         document.getElementById('propTransaction').value = p.transaction || 'aluguel';
         document.getElementById('propPrice').value = p.price || '';
-        document.getElementById('propCondo').value = p.condo || '';
+        document.getElementById('propCondo').value = p.condominio || '';
         document.getElementById('propIptu').value = p.iptu || '';
         document.getElementById('propArea').value = p.area || '';
         document.getElementById('propBedrooms').value = p.bedrooms || '';
@@ -1767,7 +1831,31 @@ function resetPropertyForm() {
     document.getElementById('editPropertyId').value = '';
     document.getElementById('addPropertyTitle').textContent = 'Adicionar novo imóvel';
     clearFormFeedback('propertyFeedback');
+    var preview = document.getElementById('propImagePreview');
+    if (preview) preview.innerHTML = '';
 }
+
+// Image file preview for property form
+(function() {
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.id === 'propImageFiles') {
+            var preview = document.getElementById('propImagePreview');
+            if (!preview) return;
+            preview.innerHTML = '';
+            var files = e.target.files;
+            for (var i = 0; i < Math.min(files.length, 10); i++) {
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    var img = document.createElement('img');
+                    img.src = ev.target.result;
+                    img.style.cssText = 'width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border)';
+                    preview.appendChild(img);
+                };
+                reader.readAsDataURL(files[i]);
+            }
+        }
+    });
+})();
 
 // ===== ADMIN =====
 async function loadAdminPanel() {
@@ -1922,6 +2010,23 @@ function formatPrice(num) {
 function formatArea(num) {
     if (!num) return '0m²';
     return num + 'm²';
+}
+
+function validateCPF(cpf) {
+    cpf = cpf.replace(/\D/g, '');
+    if (cpf.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(cpf)) return false;
+    var sum = 0;
+    for (var i = 0; i < 9; i++) sum += parseInt(cpf.charAt(i)) * (10 - i);
+    var d1 = 11 - (sum % 11);
+    if (d1 >= 10) d1 = 0;
+    if (parseInt(cpf.charAt(9)) !== d1) return false;
+    sum = 0;
+    for (var i = 0; i < 10; i++) sum += parseInt(cpf.charAt(i)) * (11 - i);
+    var d2 = 11 - (sum % 11);
+    if (d2 >= 10) d2 = 0;
+    if (parseInt(cpf.charAt(10)) !== d2) return false;
+    return true;
 }
 
 function escapeHtml(str) {
@@ -2660,4 +2765,134 @@ async function loadVerificationStatus() {
             updateVerificationStatus(data.identityVerification.status);
         }
     } catch(e) {}
+}
+
+// ===== OWNER LEAD FORM (Landing Page Proprietários) =====
+async function submitOwnerLead(e) {
+    e.preventDefault();
+    var btn = document.getElementById('olSubmitBtn');
+    var feedback = document.getElementById('olFeedback');
+    setLoading(btn, true);
+    clearFormFeedback('olFeedback');
+
+    var name = document.getElementById('olName').value.trim();
+    var phone = document.getElementById('olPhone').value.trim();
+    var email = document.getElementById('olEmail').value.trim();
+    var neighborhood = document.getElementById('olNeighborhood').value.trim();
+    var propertyType = document.getElementById('olType').value;
+    var price = document.getElementById('olPrice').value;
+
+    if (!name || !phone || !email || !neighborhood) {
+        showFormFeedback('olFeedback', 'Preencha todos os campos obrigatórios', 'error');
+        setLoading(btn, false);
+        return;
+    }
+
+    try {
+        var res = await fetch(API + '/owner/lead', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, phone, neighborhood, propertyType, price: parseFloat(price) || 0 })
+        });
+        var data = await res.json();
+        if (res.ok) {
+            showFormFeedback('olFeedback', 'Recebemos seu interesse! Entraremos em contato em breve pelo WhatsApp.', 'success');
+            document.getElementById('ownerLeadForm').reset();
+            // Abrir WhatsApp direto com mensagem pré-preenchida pro admin
+            var whatsMsg = 'Olá! Sou ' + name + ' e quero anunciar meu imóvel no MoraJunto.\n' +
+                'Bairro: ' + neighborhood + '\n' +
+                'Tipo: ' + propertyType + '\n' +
+                (price ? 'Valor: R$' + price + '\n' : '') +
+                'Meu contato: ' + phone;
+            var whatsUrl = 'https://wa.me/5516999990000?text=' + encodeURIComponent(whatsMsg);
+            setTimeout(function() { window.open(whatsUrl, '_blank'); }, 500);
+        } else {
+            showFormFeedback('olFeedback', data.error || 'Erro ao enviar. Tente novamente.', 'error');
+        }
+    } catch(e) {
+        showFormFeedback('olFeedback', 'Erro de conexão. Tente novamente.', 'error');
+    }
+    setLoading(btn, false);
+}
+
+// ===== CALCULADORA DE RENDA DO PROPRIETÁRIO =====
+function calcOwnerRevenue() {
+    var priceInput = document.getElementById('ownerCalcPrice');
+    var tenantsInput = document.getElementById('ownerCalcTenants');
+    if (!priceInput || !tenantsInput) return;
+
+    var price = parseFloat(priceInput.value) || 0;
+    var tenants = parseInt(tenantsInput.value) || 2;
+    var fee = 0.08;
+
+    var ownerReceives = price;
+    var perTenant = Math.round(price / tenants);
+    var feePerTenant = Math.round(perTenant * fee);
+    var totalPerTenant = perTenant + feePerTenant;
+    var totalPlatformFee = feePerTenant * tenants;
+
+    document.getElementById('ownerCalcReceives').textContent = 'R$ ' + ownerReceives.toLocaleString('pt-BR');
+    document.getElementById('ownerCalcPerTenant').textContent = 'R$ ' + totalPerTenant.toLocaleString('pt-BR');
+    document.getElementById('ownerCalcFee').textContent = 'R$ ' + totalPlatformFee.toLocaleString('pt-BR');
+    document.getElementById('ownerCalcTenantCount').textContent = tenants + (tenants === 1 ? ' inquilino' : ' inquilinos');
+
+    // Animate bar
+    var bar = document.getElementById('ownerCalcBar');
+    if (bar) {
+        var pct = price > 0 ? Math.min(100, (ownerReceives / (ownerReceives + totalPlatformFee)) * 100) : 100;
+        bar.style.width = pct + '%';
+    }
+}
+
+// ===== NOTIFICAÇÕES DO PROPRIETÁRIO =====
+async function loadOwnerNotifications() {
+    if (!currentToken) return;
+    try {
+        var res = await fetch(API + '/owner/notifications', {
+            headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (!res.ok) return;
+        var data = await res.json();
+        var container = document.getElementById('ownerNotifications');
+        if (!container) return;
+
+        if (!data.notifications || data.notifications.length === 0) {
+            container.innerHTML = '<p class="empty-state-text">Nenhuma notificação ainda. Quando alguém visualizar ou demonstrar interesse nos seus imóveis, você será notificado aqui.</p>';
+            return;
+        }
+
+        var html = '';
+        data.notifications.forEach(function(n) {
+            var icon = n.type === 'view_milestone' ?
+                '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6C3AED" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' :
+                '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+            var timeAgo = getTimeAgo(n.createdAt);
+            var readClass = n.read ? '' : ' notif-unread';
+            html += '<div class="owner-notif-item' + readClass + '" data-id="' + n._id + '">' +
+                '<div class="owner-notif-icon">' + icon + '</div>' +
+                '<div class="owner-notif-content">' +
+                    '<p class="owner-notif-text">' + escapeHtml(n.message) + '</p>' +
+                    '<span class="owner-notif-time">' + timeAgo + '</span>' +
+                '</div>' +
+            '</div>';
+        });
+        container.innerHTML = html;
+
+        // Marcar como lidas
+        fetch(API + '/owner/notifications/read', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + currentToken }
+        }).catch(function() {});
+    } catch(e) {}
+}
+
+function getTimeAgo(dateStr) {
+    var now = Date.now();
+    var date = new Date(dateStr).getTime();
+    var diff = Math.floor((now - date) / 1000);
+    if (diff < 60) return 'agora';
+    if (diff < 3600) return Math.floor(diff / 60) + 'min atrás';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h atrás';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd atrás';
+    return new Date(dateStr).toLocaleDateString('pt-BR');
 }

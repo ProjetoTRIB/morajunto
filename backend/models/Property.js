@@ -15,7 +15,6 @@ var propertySchema = new mongoose.Schema({
     },
     price: { type: Number, required: true },
     condominio: { type: Number, default: 0 },
-    condo: { type: Number, default: 0 },
     iptu: { type: Number, default: 0 },
     bedrooms: { type: Number, default: 0 },
     bathrooms: { type: Number, default: 0 },

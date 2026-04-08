@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const RoommateGroup = require('../models/RoommateGroup');
+const Notification = require('../models/Notification');
 const authMiddleware = require('../middleware/auth');
 const { validateId } = require('../middleware/validateId');
 
@@ -266,6 +267,23 @@ router.post('/like/:userId', validateId('userId'), async (req, res) => {
                 other.matches.push(me._id);
                 await other.save();
             }
+
+            // Notify both users about the match
+            try {
+                await Notification.create({
+                    user: me._id, type: 'roommate_match',
+                    title: 'Novo match!',
+                    message: 'Voce e ' + other.name + ' deram match! Comece uma conversa.',
+                    metadata: { matchedUserId: other._id }
+                });
+                await Notification.create({
+                    user: other._id, type: 'roommate_match',
+                    title: 'Novo match!',
+                    message: 'Voce e ' + me.name + ' deram match! Comece uma conversa.',
+                    metadata: { matchedUserId: me._id }
+                });
+            } catch (notifErr) { console.error('Match notification error:', notifErr.message); }
+
             return res.json({ match: true, user: { _id: other._id, name: other.name, roommateProfile: other.roommateProfile } });
         }
 

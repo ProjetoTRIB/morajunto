@@ -10,6 +10,9 @@ const Property = require('../models/Property');
 const { body, param, validationResult } = require('express-validator');
 const { validateId } = require('../middleware/validateId');
 const { getTierByName, creditAgentCommission } = require('../services/commissionService');
+const { updatePaymentScore } = require('../services/scoreService');
+const Notification = require('../models/Notification');
+const emailService = require('../services/emailService');
 const MP_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN || '';
 const FEE_PERCENT = 8;
 
@@ -128,10 +131,16 @@ router.post('/generate', authMiddleware, [
             agentCommissionRate = agentTier.rate;
         }
 
-        var transactions = [];
-        for (var tenant of rental.tenants) {
+        // Calculate due date (dueDay already capped at 28 by Rental schema)
+        var dueDay = rental.dueDay || 10;
+        var yearNum = parseInt(month.split('-')[0]);
+        var monthNum = parseInt(month.split('-')[1]) - 1;
+        var dueDate = new Date(yearNum, monthNum, Math.min(dueDay, 28));
+
+        // Build all transaction docs and insert atomically
+        var txDocs = rental.tenants.map(function(tenant) {
             var agentCommissionAmount = Math.round(feePerTenant * agentCommissionRate);
-            var tx = await PaymentTransaction.create({
+            return {
                 rental: rental._id,
                 property: rental.property._id,
                 tenant: tenant._id,
@@ -144,12 +153,22 @@ router.post('/generate', authMiddleware, [
                 feeAmount: feePerTenant,
                 totalAmount: totalPerTenant,
                 ownerReceives: rentPerTenant,
+                dueDate: dueDate,
                 agentId: agentId,
                 agentCommission: agentCommissionAmount,
                 platformNet: feePerTenant - agentCommissionAmount,
                 status: 'pending'
-            });
-            transactions.push(tx);
+            };
+        });
+
+        var transactions;
+        try {
+            transactions = await PaymentTransaction.insertMany(txDocs, { ordered: true });
+        } catch (dupErr) {
+            if (dupErr.code === 11000) {
+                return res.status(400).json({ error: 'Cobranças do mês ' + month + ' já foram geradas' });
+            }
+            throw dupErr;
         }
 
         res.json({
@@ -290,6 +309,17 @@ router.post('/:id/confirm', validateId('id'), authMiddleware, async (req, res) =
         tx.confirmedBy = req.user.userId;
         await tx.save();
         await creditAgentCommission(tx);
+        await updatePaymentScore(tx);
+
+        // Notify tenant that payment was confirmed
+        try {
+            await Notification.create({
+                user: tx.tenant, type: 'payment_confirmed',
+                title: 'Pagamento confirmado',
+                message: 'Seu pagamento de R$' + tx.totalAmount.toFixed(2) + ' ref. ' + tx.month + ' foi confirmado pelo proprietário.',
+                metadata: { paymentTransactionId: tx._id, month: tx.month }
+            });
+        } catch (notifErr) { console.error('Notification error:', notifErr.message); }
 
         res.json({
             message: 'Pagamento confirmado manualmente!',
@@ -346,7 +376,7 @@ router.post('/webhook', express.json(), async (req, res) => {
                 mpResult = await checkMPPayment(mpId);
             } catch (e) {
                 console.error('Webhook: falha ao verificar pagamento no MP:', mpId);
-                return res.sendStatus(200);
+                return res.sendStatus(500);
             }
 
             // Only process if MP confirms the payment exists and is approved
@@ -367,13 +397,74 @@ router.post('/webhook', express.json(), async (req, res) => {
                 tx.paidAt = new Date();
                 await tx.save();
                 await creditAgentCommission(tx);
+                await updatePaymentScore(tx);
                 console.log('💰 Pagamento confirmado via webhook: R$' + tx.totalAmount + ' (taxa: R$' + tx.feeAmount + ')');
+
+                // Notify roommates + owner via Socket.io
+                try {
+                    var io = req.app.get('io');
+                    var onlineUsers = req.app.get('onlineUsers');
+                    if (io && tx.rental) {
+                        var rental = await Rental.findById(tx.rental);
+                        if (rental) {
+                            var notifyIds = rental.tenants.map(function(t) { return t.toString(); });
+                            notifyIds.push(rental.owner.toString());
+                            notifyIds.forEach(function(uid) {
+                                var socketId = onlineUsers.get(uid);
+                                if (socketId) {
+                                    io.to(socketId).emit('payment-update', {
+                                        rentalId: tx.rental,
+                                        tenantId: tx.tenant,
+                                        tenantName: tx.tenantName,
+                                        month: tx.month,
+                                        status: 'paid'
+                                    });
+                                }
+                            });
+                        }
+                    }
+                    // Create notifications
+                    await Notification.create({
+                        user: tx.owner, type: 'payment_received',
+                        title: 'Pagamento recebido',
+                        message: tx.tenantName + ' pagou R$' + tx.ownerReceives.toFixed(2) + ' ref. ' + tx.month,
+                        metadata: { paymentTransactionId: tx._id, rentalId: tx.rental, month: tx.month }
+                    });
+                    if (tx.rental) {
+                        var rentalForNotif = await Rental.findById(tx.rental);
+                        if (rentalForNotif) {
+                            for (var tid of rentalForNotif.tenants) {
+                                if (tid.toString() !== tx.tenant.toString()) {
+                                    await Notification.create({
+                                        user: tid, type: 'roommate_paid',
+                                        title: 'Roommate pagou',
+                                        message: tx.tenantName + ' pagou a parte dele(a) de ' + tx.month,
+                                        metadata: { rentalId: tx.rental, month: tx.month }
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    // Enviar email de confirmação para o inquilino
+                    try {
+                        var tenantUser = await User.findById(tx.tenant);
+                        var property = tx.rental ? await Rental.findById(tx.rental).then(r => r && Property.findById(r.property)) : null;
+                        if (tenantUser) {
+                            emailService.sendPaymentConfirmedEmail(
+                                tenantUser.email,
+                                tenantUser.name,
+                                tx.totalAmount,
+                                property ? property.title : 'Aluguel ref. ' + tx.month
+                            );
+                        }
+                    } catch (emailErr) { console.error('Payment email error:', emailErr.message); }
+                } catch (notifErr) { console.error('Notification error:', notifErr.message); }
             }
         }
         res.sendStatus(200);
     } catch (e) {
         console.error('Webhook error:', e.message);
-        res.sendStatus(200);
+        res.sendStatus(500);
     }
 });
 
@@ -456,6 +547,120 @@ router.get('/admin/dashboard', authMiddleware, async (req, res) => {
         });
     } catch (e) {
         res.json({ totalCollected: 0, totalFees: 0, totalPending: 0 });
+    }
+});
+
+// ===== GET /api/payments/rental/:rentalId/status — Painel de transparência =====
+router.get('/rental/:rentalId/status', validateId('rentalId'), authMiddleware, async (req, res) => {
+    try {
+        var rental = await Rental.findById(req.params.rentalId)
+            .populate('tenants', 'name profilePhoto paymentScore');
+
+        if (!rental) return res.status(404).json({ error: 'Aluguel não encontrado' });
+
+        // Only tenants or owner can view
+        var userId = req.user.userId;
+        var isTenant = rental.tenants.some(function(t) { return t._id.toString() === userId; });
+        var isOwner = rental.owner.toString() === userId;
+        if (!isTenant && !isOwner) {
+            return res.status(403).json({ error: 'Sem permissão' });
+        }
+
+        var month = req.query.month || new Date().toISOString().substring(0, 7);
+
+        var transactions = await PaymentTransaction.find({
+            rental: req.params.rentalId,
+            month: month
+        });
+
+        var totalExpected = 0;
+        var totalReceived = 0;
+
+        var tenants = rental.tenants.map(function(t) {
+            var tx = transactions.find(function(tr) { return tr.tenant.toString() === t._id.toString(); });
+            var amount = tx ? tx.totalAmount : 0;
+            var ownerAmount = tx ? tx.ownerReceives : 0;
+            totalExpected += amount;
+            if (tx && tx.status === 'paid') totalReceived += amount;
+            return {
+                tenantId: t._id,
+                name: t.name,
+                photo: t.profilePhoto || '',
+                badge: t.paymentScore ? t.paymentScore.badge : 'none',
+                score: t.paymentScore ? t.paymentScore.score : 0,
+                amount: amount,
+                ownerReceives: ownerAmount,
+                status: tx ? tx.status : 'not_generated',
+                dueDate: tx ? tx.dueDate : null,
+                paidAt: tx ? tx.paidAt : null,
+                transactionId: tx ? tx._id : null
+            };
+        });
+
+        res.json({
+            month: month,
+            rentAmount: rental.rentAmount,
+            dueDay: rental.dueDay || 10,
+            tenants: tenants,
+            summary: {
+                totalExpected: totalExpected,
+                totalReceived: totalReceived,
+                totalPending: totalExpected - totalReceived,
+                paidCount: tenants.filter(function(t) { return t.status === 'paid'; }).length,
+                totalCount: tenants.length
+            }
+        });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao buscar status' });
+    }
+});
+
+// ===== GET /api/payments/:id/receipt — Recibo digital =====
+router.get('/:id/receipt', validateId('id'), authMiddleware, async (req, res) => {
+    try {
+        var tx = await PaymentTransaction.findById(req.params.id)
+            .populate('tenant', 'name cpf')
+            .populate('owner', 'name')
+            .populate('property', 'title address neighborhood');
+
+        if (!tx) return res.status(404).json({ error: 'Não encontrado' });
+        if (tx.status !== 'paid') return res.status(400).json({ error: 'Pagamento ainda não foi confirmado' });
+
+        // Only tenant or owner
+        if (tx.tenant._id.toString() !== req.user.userId && tx.owner._id.toString() !== req.user.userId) {
+            return res.status(403).json({ error: 'Sem permissão' });
+        }
+
+        // Mask CPF
+        var cpf = tx.tenant.cpf || '';
+        var maskedCpf = cpf.length >= 11 ? '***.' + cpf.substring(3, 6) + '.' + cpf.substring(6, 9) + '-' + cpf.substring(9) : '***';
+
+        var monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        var parts = tx.month.split('-');
+        var monthLabel = monthNames[parseInt(parts[1]) - 1] + '/' + parts[0];
+
+        res.json({
+            receiptNumber: 'MJ-' + tx.month + '-' + tx._id.toString().substring(18),
+            date: tx.paidAt.toISOString().substring(0, 10),
+            tenant: { name: tx.tenant.name, cpf: maskedCpf },
+            owner: { name: tx.owner.name },
+            property: {
+                title: tx.property ? tx.property.title : 'Imóvel',
+                address: tx.property ? tx.property.address : '',
+                neighborhood: tx.property ? tx.property.neighborhood : ''
+            },
+            month: monthLabel,
+            rentAmount: tx.rentAmount,
+            platformFee: tx.feeAmount,
+            feePercent: tx.feePercent,
+            totalPaid: tx.totalAmount,
+            ownerReceives: tx.ownerReceives,
+            paymentMethod: 'PIX',
+            mpPaymentId: tx.mpPaymentId || 'N/A',
+            confirmedAt: tx.paidAt
+        });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao gerar recibo' });
     }
 });
 

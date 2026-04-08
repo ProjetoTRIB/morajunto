@@ -1,75 +1,56 @@
 /* ===== AlugaJa — Roommate Matching (Dividir Apto) ===== */
 
-let rmProfile;
-try { rmProfile = JSON.parse(localStorage.getItem('alugaja_rm_profile') || 'null'); } catch(e) { rmProfile = null; }
+let rmProfile = null;
 let rmScales = { cleanliness: 3, noise: 3, social: 3 };
 let rmSleepPrefs = { sleep: 'normal', wake: 'normal' };
 let rmSwitches = { rmSmoking: false, rmPets: false, rmVisitors: false, rmGroceries: false };
 let rmDiscoverProfiles = [];
 let rmDiscoverIndex = 0;
-let rmMatches;
-try { rmMatches = JSON.parse(localStorage.getItem('alugaja_rm_matches') || '[]'); } catch(e) { rmMatches = []; }
-let rmGroups;
-try { rmGroups = JSON.parse(localStorage.getItem('alugaja_rm_groups') || '[]'); } catch(e) { rmGroups = []; }
+let rmMatches = [];
+let rmGroups = [];
 let rmCurrentGroupId = null;
 
-// Mock profiles for discover
-const rmMockProfiles = [
-    {
-        id: 'rm1', name: 'Lucas Mendes', age: 24, occupation: 'Estudante de Engenharia - USP',
-        bio: 'Gosto de estudar em casa, mas tambem curto sair nos fins de semana. Procuro alguem tranquilo para dividir um apto no centro.',
-        budget: 1200, neighborhoods: ['Centro', 'Vila Tiberio'],
-        cleanliness: 4, noise: 2, social: 3, sleep: 'normal', wake: 'cedo',
-        smoking: false, pets: false, visitors: true, groceries: true, verified: ['linkedin'], compatibility: 87
-    },
-    {
-        id: 'rm2', name: 'Ana Clara Silva', age: 22, occupation: 'Desenvolvedora Front-end',
-        bio: 'Trabalho remoto, sou organizada e adoro cozinhar. Tenho uma gatinha chamada Luna. Busco alguem que aceite pets.',
-        budget: 1500, neighborhoods: ['Nova Alianca', 'Jd California'],
-        cleanliness: 5, noise: 2, social: 4, sleep: 'tarde', wake: 'normal',
-        smoking: false, pets: true, visitors: true, groceries: true, verified: ['instagram', 'linkedin'], compatibility: 92
-    },
-    {
-        id: 'rm3', name: 'Pedro Henrique', age: 26, occupation: 'Analista de Marketing',
-        bio: 'Trabalho em horario comercial. Gosto de manter o apto limpo e organizado. Sou tranquilo durante a semana e social nos fds.',
-        budget: 1800, neighborhoods: ['Ribeir\u00e2nia', 'Jd Sumare'],
-        cleanliness: 4, noise: 3, social: 4, sleep: 'normal', wake: 'cedo',
-        smoking: false, pets: false, visitors: true, groceries: false, verified: ['twitter'], compatibility: 78
-    },
-    {
-        id: 'rm4', name: 'Mariana Costa', age: 23, occupation: 'Estudante de Medicina',
-        bio: 'Estudo muito, entao preciso de silencio durante a semana. Sou super gente boa e adoro conversar. Procuro um apto perto do campus.',
-        budget: 1300, neighborhoods: ['Centro', 'Nova Alianca'],
-        cleanliness: 5, noise: 1, social: 3, sleep: 'cedo', wake: 'cedo',
-        smoking: false, pets: false, visitors: false, groceries: true, verified: ['instagram'], compatibility: 81
-    },
-    {
-        id: 'rm5', name: 'Rafael Oliveira', age: 28, occupation: 'Designer Grafico - Freelancer',
-        bio: 'Trabalho em casa como freelancer. Gosto de um ambiente criativo e descontraido. Toco violao as vezes, mas com respeito ao horario.',
-        budget: 1600, neighborhoods: ['Jd California', 'Centro'],
-        cleanliness: 3, noise: 3, social: 5, sleep: 'tarde', wake: 'tarde',
-        smoking: false, pets: true, visitors: true, groceries: true, verified: ['instagram', 'twitter', 'linkedin'], compatibility: 74
-    },
-    {
-        id: 'rm6', name: 'Juliana Santos', age: 25, occupation: 'Enfermeira',
-        bio: 'Trabalho em turnos no hospital, entao meus horarios variam. Sou super limpa e organizada. Procuro alguem compreensivo com horarios.',
-        budget: 1400, neighborhoods: ['Vila Tiberio', 'Centro'],
-        cleanliness: 5, noise: 1, social: 2, sleep: 'normal', wake: 'cedo',
-        smoking: false, pets: false, visitors: false, groceries: true, verified: ['linkedin'], compatibility: 69
-    },
-    {
-        id: 'rm7', name: 'Gabriel Ferreira', age: 21, occupation: 'Estudante de Direito',
-        bio: 'Primeiro ano morando sozinho. Quero dividir para economizar e fazer amizade. Gosto de jogos e series a noite.',
-        budget: 1000, neighborhoods: ['Centro', 'Vila Tiberio', 'Jd Sumare'],
-        cleanliness: 3, noise: 3, social: 4, sleep: 'tarde', wake: 'normal',
-        smoking: false, pets: true, visitors: true, groceries: true, verified: [], compatibility: 83
-    }
-];
-
 // ===== INITIALIZATION =====
-function initRoommate() {
-    rmDiscoverProfiles = [...rmMockProfiles];
+async function initRoommate() {
     rmDiscoverIndex = 0;
+
+    // Load profile from backend if authenticated
+    if (currentToken) {
+        try {
+            var res = await fetch(API + '/roommate/profile', {
+                headers: { 'Authorization': 'Bearer ' + currentToken }
+            });
+            if (res.ok) {
+                var data = await res.json();
+                var rp = data.roommateProfile || {};
+                rmProfile = {
+                    name: data.name || '',
+                    age: rp.age || '',
+                    occupation: rp.occupation || '',
+                    budget: rp.budget || '',
+                    salary: rp.salary || 0,
+                    bio: rp.bio || '',
+                    neighborhoods: rp.neighborhood || '',
+                    course: rp.course || '',
+                    genderPreference: rp.genderPreference || '',
+                    ageMin: rp.ageMin || 18,
+                    ageMax: rp.ageMax || 35,
+                    scales: { cleanliness: rp.cleanliness || 3, noise: rp.noise || 3, social: rp.visitors || 3 },
+                    sleepPrefs: { sleep: rp.sleep || 'normal', wake: 'normal' },
+                    switches: {
+                        rmSmoking: rp.smoking === 'sim' || rp.smoking === true,
+                        rmPets: rp.pets === 'sim' || rp.pets === true,
+                        rmVisitors: (rp.visitors || 3) >= 3,
+                        rmGroceries: false
+                    },
+                    active: rp.active || false
+                };
+                if (rmProfile.scales) rmScales = { ...rmProfile.scales };
+                if (rmProfile.sleepPrefs) rmSleepPrefs = { ...rmProfile.sleepPrefs };
+                if (rmProfile.switches) rmSwitches = { ...rmProfile.switches };
+            }
+        } catch (e) { /* fallback: no profile loaded */ }
+    }
 
     // Restore profile data to form if exists
     if (rmProfile) {
@@ -156,6 +137,12 @@ function fillProfileForm(profile) {
             });
         }
     }
+    if (profile.salary && document.getElementById('rmSalary')) {
+        document.getElementById('rmSalary').value = profile.salary;
+        document.querySelectorAll('.rm-income-btn').forEach(function(btn) {
+            btn.classList.toggle('active', btn.dataset.val === String(profile.salary));
+        });
+    }
     if (profile.course && document.getElementById('rmCourse')) document.getElementById('rmCourse').value = profile.course;
     if (profile.genderPreference && document.getElementById('rmGenderPref')) document.getElementById('rmGenderPref').value = profile.genderPreference;
     if (profile.ageMin && document.getElementById('rmAgeMin')) document.getElementById('rmAgeMin').value = profile.ageMin;
@@ -178,7 +165,7 @@ function fillProfileForm(profile) {
     }
 }
 
-function saveRoommateProfile(e) {
+async function saveRoommateProfile(e) {
     e.preventDefault();
     if (!currentToken || !currentUser) {
         showLoginModal();
@@ -202,25 +189,55 @@ function saveRoommateProfile(e) {
     const ageMin = parseInt(document.getElementById('rmAgeMin') ? document.getElementById('rmAgeMin').value : 18) || 18;
     const ageMax = parseInt(document.getElementById('rmAgeMax') ? document.getElementById('rmAgeMax').value : 35) || 35;
 
-    rmProfile = {
-        name, age, occupation, budget, bio, neighborhoods,
-        course,
-        genderPreference,
-        ageMin,
-        ageMax,
-        scales: { ...rmScales },
-        sleepPrefs: { ...rmSleepPrefs },
-        switches: { ...rmSwitches },
-        verified: [],
-        createdAt: new Date().toISOString()
+    var salary = parseInt(document.getElementById('rmSalary') ? document.getElementById('rmSalary').value : 0) || 0;
+
+    // Save to backend
+    var payload = {
+        bio: bio,
+        age: age,
+        occupation: occupation,
+        budget: budget,
+        salary: salary,
+        neighborhood: neighborhoods,
+        course: course,
+        genderPreference: genderPreference,
+        ageMin: ageMin,
+        ageMax: ageMax,
+        cleanliness: rmScales.cleanliness,
+        noise: rmScales.noise,
+        visitors: rmScales.social,
+        sleep: rmSleepPrefs.sleep,
+        smoking: rmSwitches.rmSmoking ? 'sim' : 'nao',
+        pets: rmSwitches.rmPets ? 'sim' : 'nao',
+        active: true
     };
 
-    localStorage.setItem('alugaja_rm_profile', JSON.stringify(rmProfile));
-    showFormFeedback('rmSetupFeedback', 'Perfil salvo com sucesso! Explore perfis compativeis.', 'success');
+    try {
+        var res = await fetch(API + '/roommate/profile', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+            body: JSON.stringify(payload)
+        });
+        var data = await res.json();
+        if (!res.ok) {
+            showFormFeedback('rmSetupFeedback', data.error || 'Erro ao salvar perfil.', 'error');
+            return;
+        }
 
-    setTimeout(() => {
-        switchRoommateTab('discover');
-    }, 1200);
+        rmProfile = {
+            name, age, occupation, budget, bio, neighborhoods,
+            course, genderPreference, ageMin, ageMax,
+            scales: { ...rmScales },
+            sleepPrefs: { ...rmSleepPrefs },
+            switches: { ...rmSwitches },
+            active: true
+        };
+
+        showFormFeedback('rmSetupFeedback', 'Perfil salvo com sucesso! Explore perfis compativeis.', 'success');
+        setTimeout(() => { switchRoommateTab('discover'); }, 1200);
+    } catch (err) {
+        showFormFeedback('rmSetupFeedback', 'Erro de conexao. Tente novamente.', 'error');
+    }
 }
 
 function verifySocial(platform, evt) {
@@ -311,6 +328,12 @@ function getSleepLabel(field, value) {
     return labels[field] ? labels[field][value] || '' : '';
 }
 
+function selectIncome(btn) {
+    document.querySelectorAll('.rm-income-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('rmSalary').value = btn.dataset.val;
+}
+
 function toggleRmSwitch(id) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -319,11 +342,52 @@ function toggleRmSwitch(id) {
 }
 
 // ===== DISCOVER =====
-function loadDiscoverProfiles() {
-    rmDiscoverProfiles = rmMockProfiles.filter(p => {
-        // Skip already matched
-        return !rmMatches.some(m => m.id === p.id);
-    });
+async function loadDiscoverProfiles() {
+    if (!currentToken) {
+        rmDiscoverProfiles = [];
+        rmDiscoverIndex = 0;
+        renderCurrentDiscoverCard();
+        return;
+    }
+
+    try {
+        var res = await fetch(API + '/roommate/discover', {
+            headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        var data = await res.json();
+        if (res.ok && data.profiles) {
+            rmDiscoverProfiles = data.profiles.map(function(p) {
+                var rp = p.roommateProfile || {};
+                return {
+                    id: p._id,
+                    name: p.name || 'Sem nome',
+                    age: rp.age || '?',
+                    occupation: rp.occupation || '',
+                    bio: rp.bio || '',
+                    budget: rp.budget || 0,
+                    neighborhoods: rp.neighborhood ? [rp.neighborhood] : [],
+                    cleanliness: rp.cleanliness || 3,
+                    noise: rp.noise || 3,
+                    social: rp.visitors || 3,
+                    sleep: rp.sleep || 'normal',
+                    smoking: rp.smoking === 'sim' || rp.smoking === true,
+                    pets: rp.pets === 'sim' || rp.pets === true,
+                    visitors: (rp.visitors || 3) >= 3,
+                    groceries: false,
+                    verified: p.socialVerified ? ['social'] : [],
+                    socialVerified: p.socialVerified,
+                    identityVerification: p.identityVerification,
+                    urgentUntil: rp.urgentUntil,
+                    compatibility: p.compatibility || 0
+                };
+            });
+        } else {
+            rmDiscoverProfiles = [];
+        }
+    } catch (e) {
+        rmDiscoverProfiles = [];
+    }
+
     rmDiscoverIndex = 0;
     renderCurrentDiscoverCard();
 }
@@ -399,8 +463,9 @@ function renderCurrentDiscoverCard() {
         </div>`;
 }
 
-function likeProfile() {
+async function likeProfile() {
     if (rmDiscoverIndex >= rmDiscoverProfiles.length) return;
+    if (!currentToken) { showLoginModal(); return; }
 
     const card = document.getElementById('rmCurrentCard');
     if (!card) return;
@@ -408,18 +473,41 @@ function likeProfile() {
     const profile = rmDiscoverProfiles[rmDiscoverIndex];
     card.classList.add('swipe-right');
 
-    // Add to matches
-    if (!rmMatches.some(m => m.id === profile.id)) {
-        rmMatches.push({
-            id: profile.id,
-            name: profile.name,
-            age: profile.age,
-            occupation: profile.occupation,
-            budget: profile.budget,
-            compatibility: profile.compatibility,
-            matchedAt: new Date().toISOString()
+    try {
+        var res = await fetch(API + '/roommate/like/' + profile.id, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + currentToken }
         });
-        localStorage.setItem('alugaja_rm_matches', JSON.stringify(rmMatches));
+        var data = await res.json();
+        if (res.ok && data.match) {
+            // Mutual match!
+            showToast('Match com ' + profile.name + '!', 'success');
+            loadMatches();
+        }
+    } catch (e) { /* continue silently */ }
+
+    setTimeout(() => {
+        rmDiscoverIndex++;
+        renderCurrentDiscoverCard();
+    }, 500);
+}
+
+async function skipProfile() {
+    if (rmDiscoverIndex >= rmDiscoverProfiles.length) return;
+
+    const card = document.getElementById('rmCurrentCard');
+    if (!card) return;
+
+    const profile = rmDiscoverProfiles[rmDiscoverIndex];
+    card.classList.add('swipe-left');
+
+    if (currentToken) {
+        try {
+            await fetch(API + '/roommate/dislike/' + profile.id, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + currentToken }
+            });
+        } catch (e) { /* continue silently */ }
     }
 
     setTimeout(() => {
@@ -428,23 +516,37 @@ function likeProfile() {
     }, 500);
 }
 
-function skipProfile() {
-    if (rmDiscoverIndex >= rmDiscoverProfiles.length) return;
-
-    const card = document.getElementById('rmCurrentCard');
-    if (!card) return;
-
-    card.classList.add('swipe-left');
-
-    setTimeout(() => {
-        rmDiscoverIndex++;
-        renderCurrentDiscoverCard();
-    }, 500);
-}
-
 // ===== MATCHES =====
-function loadMatches() {
-    rmMatches = JSON.parse(localStorage.getItem('alugaja_rm_matches') || '[]');
+async function loadMatches() {
+    if (!currentToken) {
+        rmMatches = [];
+        renderMatches();
+        return;
+    }
+
+    try {
+        var res = await fetch(API + '/roommate/matches', {
+            headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        var data = await res.json();
+        if (res.ok && data.matches) {
+            rmMatches = data.matches.map(function(m) {
+                var rp = m.roommateProfile || {};
+                return {
+                    id: m._id,
+                    name: m.name || 'Sem nome',
+                    age: rp.age || '?',
+                    occupation: rp.occupation || '',
+                    budget: rp.budget || 0,
+                    compatibility: 0
+                };
+            });
+        } else {
+            rmMatches = [];
+        }
+    } catch (e) {
+        rmMatches = [];
+    }
     renderMatches();
 }
 
@@ -497,13 +599,7 @@ function addToGroupPrompt(matchId) {
         return;
     }
 
-    function escapeAttr(str) {
-        if (!str) return '';
-        return String(str).replace(/[&'"<>]/g, function(c) {
-            return {'&':'&amp;', "'": '&#39;', '"':'&quot;', '<':'&lt;', '>':'&gt;'}[c];
-        });
-    }
-    var safeMatchId = escapeAttr(matchId);
+    var safeMatchId = escapeHtml(matchId);
     var html = '<div class="custom-modal-body"><p>Adicionar <strong>' + escapeHtml(match.name) + '</strong> a qual grupo?</p>';
     html += rmGroups.map(function(g, i) {
         return '<button class="btn btn-outline w100 custom-modal-group-btn" onclick="addMatchToGroup(' + i + ',\'' + safeMatchId + '\')">' + escapeHtml(g.name) + '</button>';
@@ -513,36 +609,46 @@ function addToGroupPrompt(matchId) {
     showCustomModalHTML('Adicionar ao grupo', html);
 }
 
-function addMatchToGroup(idx, matchId) {
+async function addMatchToGroup(idx, matchId) {
     closeCustomModal();
     var match = rmMatches.find(function(m) { return m.id === matchId; });
-    if (match && rmGroups[idx] && !rmGroups[idx].members.some(function(mb) { return mb.id === matchId; })) {
-        rmGroups[idx].members.push({ id: match.id, name: match.name });
-        localStorage.setItem('alugaja_rm_groups', JSON.stringify(rmGroups));
-        renderGroups();
-        showCustomModalHTML('Adicionado!', '<div class="custom-modal-success"><svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><p><strong>' + escapeHtml(match.name) + '</strong> foi adicionado ao grupo<br><strong>' + escapeHtml(rmGroups[idx].name) + '</strong></p></div><div class="custom-modal-actions"><button class="btn btn-accent" onclick="closeCustomModal()">OK</button></div>');
-    }
+    if (!match || !rmGroups[idx]) return;
+
+    // For backend groups, we would need an add-member endpoint
+    // For now, show the success since backend groups are created with members
+    showCustomModalHTML('Info', '<div class="custom-modal-success"><p>Para adicionar membros, crie um novo grupo com esse match.</p></div><div class="custom-modal-actions"><button class="btn btn-accent" onclick="closeCustomModal()">OK</button></div>');
 }
 
-function startChat(matchId) {
-    // Check if there's a group with this match, or create a DM-style group
-    let group = rmGroups.find(g => g.members.length === 1 && g.members[0].id === matchId && g.isDM);
-    if (!group) {
-        const match = rmMatches.find(m => m.id === matchId);
-        if (!match) return;
-        group = {
-            id: 'grp_dm_' + Date.now(),
-            name: `Conversa com ${match.name}`,
-            members: [{ id: match.id, name: match.name }],
-            messages: [],
-            isDM: true,
-            budget: 0,
-            createdAt: new Date().toISOString()
-        };
-        rmGroups.push(group);
-        localStorage.setItem('alugaja_rm_groups', JSON.stringify(rmGroups));
+async function startChat(matchId) {
+    if (!currentToken) { showLoginModal(); return; }
+
+    // Check if there's already a group with this match
+    var existingGroup = rmGroups.find(function(g) {
+        return g.members && g.members.some(function(m) { return (m.id || m._id || '').toString() === matchId; });
+    });
+
+    if (existingGroup) {
+        showGroupDetail(existingGroup.id);
+        return;
     }
-    showGroupDetail(group.id);
+
+    // Create group via backend
+    try {
+        var res = await fetch(API + '/roommate/groups', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+            body: JSON.stringify({ matchUserId: matchId })
+        });
+        var data = await res.json();
+        if (res.ok && data.group) {
+            await loadGroups();
+            showGroupDetail(data.group._id);
+        } else {
+            showToast(data.error || 'Erro ao criar grupo', 'error');
+        }
+    } catch (e) {
+        showToast('Erro de conexao', 'error');
+    }
 }
 
 // ===== GROUPS =====
@@ -552,54 +658,82 @@ function createGroup() {
         return;
     }
 
-    showCustomModal('Criar grupo', 'Nome do grupo (ex: "República Centro 3 quartos"):', true, true).then(function(name) {
-        if (!name || !name.trim()) return;
-        _finishCreateGroup(name.trim());
-    });
-    return;
+    // Backend requires a matchUserId to create a group
+    if (rmMatches.length === 0) {
+        showCustomModal('Sem matches', 'Voce precisa ter pelo menos um match para criar um grupo.', false, false);
+        return;
+    }
+
+    // Show list of matches to select from
+    var html = '<div class="custom-modal-body"><p>Selecione um match para criar o grupo:</p>';
+    html += rmMatches.map(function(m) {
+        return '<button class="btn btn-outline w100 custom-modal-group-btn" onclick="createGroupWithMember(\'\',\'' + escapeHtml(m.id) + '\')">' + escapeHtml(m.name) + '</button>';
+    }).join('');
+    html += '</div>';
+    showCustomModalHTML('Criar grupo', html);
 }
 
-function _finishCreateGroup(name) {
-    var budget = 0;
+async function createGroupWithMember(name, matchId) {
+    closeCustomModal();
+    if (!currentToken) { showLoginModal(); return; }
 
-    const group = {
-        id: 'grp_' + Date.now(),
-        name: name.trim(),
-        members: [{ id: 'me', name: (currentUser && currentUser.name) || 'Voce' }],
-        messages: [],
-        budget: budget,
-        createdAt: new Date().toISOString()
-    };
-
-    rmGroups.push(group);
-    localStorage.setItem('alugaja_rm_groups', JSON.stringify(rmGroups));
-    renderGroups();
+    try {
+        var res = await fetch(API + '/roommate/groups', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+            body: JSON.stringify({ matchUserId: matchId })
+        });
+        var data = await res.json();
+        if (res.ok && data.group) {
+            showToast('Grupo criado!', 'success');
+            await loadGroups();
+        } else {
+            showToast(data.error || 'Erro ao criar grupo', 'error');
+        }
+    } catch (e) {
+        showToast('Erro de conexao', 'error');
+    }
 }
 
-function createGroupWithMember(name, matchId) {
-    const match = rmMatches.find(m => m.id === matchId);
-    if (!match) return;
+async function loadGroups() {
+    if (!currentToken) {
+        rmGroups = [];
+        renderGroups();
+        return;
+    }
 
-    const group = {
-        id: 'grp_' + Date.now(),
-        name: name.trim(),
-        members: [
-            { id: 'me', name: (currentUser && currentUser.name) || 'Voce' },
-            { id: match.id, name: match.name }
-        ],
-        messages: [],
-        budget: 0,
-        createdAt: new Date().toISOString()
-    };
-
-    rmGroups.push(group);
-    localStorage.setItem('alugaja_rm_groups', JSON.stringify(rmGroups));
-    renderGroups();
-    showToast('Grupo "' + name + '" criado com ' + match.name + '!', 'success');
-}
-
-function loadGroups() {
-    rmGroups = JSON.parse(localStorage.getItem('alugaja_rm_groups') || '[]');
+    try {
+        var res = await fetch(API + '/roommate/groups', {
+            headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        var data = await res.json();
+        if (res.ok && data.groups) {
+            rmGroups = data.groups.map(function(g) {
+                return {
+                    id: g._id,
+                    name: g.neighborhood ? ('Grupo - ' + g.neighborhood) : ('Grupo #' + g._id.substring(0, 6)),
+                    members: (g.members || []).map(function(m) {
+                        return { id: m._id, name: m.name || 'Membro' };
+                    }),
+                    messages: (g.chat || []).map(function(c) {
+                        return {
+                            id: c._id,
+                            senderId: c.user,
+                            senderName: c.userName || 'Membro',
+                            text: c.message,
+                            timestamp: c.createdAt || new Date().toISOString()
+                        };
+                    }),
+                    budget: g.totalBudget || 0,
+                    createdAt: g.createdAt
+                };
+            });
+        } else {
+            rmGroups = [];
+        }
+    } catch (e) {
+        rmGroups = [];
+    }
     renderGroups();
 }
 
@@ -667,7 +801,8 @@ function renderGroupMessages(group) {
     }
 
     container.innerHTML = group.messages.map(msg => {
-        const isSent = msg.senderId === 'me';
+        const myId = currentUser ? (currentUser._id || currentUser.id) : 'me';
+        const isSent = msg.senderId === myId || msg.senderId === 'me';
         const time = new Date(msg.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         return `
         <div class="rm-chat-msg ${isSent ? 'sent' : 'received'}">
@@ -680,8 +815,8 @@ function renderGroupMessages(group) {
     container.scrollTop = container.scrollHeight;
 }
 
-function sendGroupMessage() {
-    if (!rmCurrentGroupId) return;
+async function sendGroupMessage() {
+    if (!rmCurrentGroupId || !currentToken) return;
 
     const input = document.getElementById('rmChatInput');
     const text = input.value.trim();
@@ -690,48 +825,26 @@ function sendGroupMessage() {
     const group = rmGroups.find(g => g.id === rmCurrentGroupId);
     if (!group) return;
 
+    // Optimistic: show message immediately
     if (!group.messages) group.messages = [];
-
     group.messages.push({
         id: 'msg_' + Date.now(),
-        senderId: 'me',
+        senderId: currentUser ? currentUser._id : 'me',
         senderName: (currentUser && currentUser.name) || 'Voce',
         text: text,
         timestamp: new Date().toISOString()
     });
-
-    localStorage.setItem('alugaja_rm_groups', JSON.stringify(rmGroups));
     input.value = '';
     renderGroupMessages(group);
 
-    // Simulate a reply after a short delay
-    if (group.members.length > 1) {
-        const otherMember = group.members.find(m => m.id !== 'me');
-        if (otherMember) {
-            setTimeout(() => {
-                const replies = [
-                    'Oi! Tudo bem? Que legal que voce mandou mensagem!',
-                    'Show! Vamos combinar os detalhes do apartamento?',
-                    'Perfeito, estou disponivel para visitar imoveis neste fim de semana.',
-                    'Que bom! Qual bairro voce prefere?',
-                    'Vamos marcar para conversar por video essa semana?',
-                    'Legal! Meu orcamento maximo e R$ 1.500/mes, e o seu?'
-                ];
-                const reply = replies[Math.floor(Math.random() * replies.length)];
-                group.messages.push({
-                    id: 'msg_' + Date.now(),
-                    senderId: otherMember.id,
-                    senderName: otherMember.name,
-                    text: reply,
-                    timestamp: new Date().toISOString()
-                });
-                localStorage.setItem('alugaja_rm_groups', JSON.stringify(rmGroups));
-                if (rmCurrentGroupId === group.id) {
-                    renderGroupMessages(group);
-                }
-            }, 1500 + Math.random() * 2000);
-        }
-    }
+    // Send to backend
+    try {
+        await fetch(API + '/roommate/groups/' + rmCurrentGroupId + '/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+            body: JSON.stringify({ message: text })
+        });
+    } catch (e) { /* message already shown optimistically */ }
 }
 
 // ===== TAB SWITCHING =====
@@ -757,9 +870,6 @@ function switchRoommateTab(tab) {
         loadGroups();
     }
 }
-
-// ===== CUSTOM MODAL (replaces prompt/alert) =====
-var _customModalCallback = null;
 
 // Custom modal functions are defined in the inline script of index.html (Promise-based)
 // showCustomModal(title, msg, hasInput, hasCancel) returns a Promise

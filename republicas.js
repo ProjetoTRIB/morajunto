@@ -20,10 +20,12 @@ async function loadRepublicas() {
         var res = await fetch(API + '/republicas?' + params.toString());
         var data = await res.json();
         currentRepublicas = data.republicas || data || [];
+        if (currentRepublicas.length === 0) throw new Error('Empty');
         renderRepublicas(currentRepublicas);
     } catch(e) {
-        // Demo data
-        renderRepublicas(getDemoRepublicas());
+        // Demo data on error or empty results
+        currentRepublicas = getDemoRepublicas();
+        renderRepublicas(currentRepublicas);
     }
 }
 

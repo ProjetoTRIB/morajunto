@@ -1,11 +1,11 @@
-var CACHE_NAME = 'morajunto-v1';
+var CACHE_NAME = 'morajunto-__BUILD_VERSION__';
 var STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/style.css?v=v1',
-  '/script.js?v=v1',
-  '/roommate.js?v=v1',
-  '/republicas.js?v=v1',
+  '/style.css?v=__BUILD_VERSION__',
+  '/script.js?v=__BUILD_VERSION__',
+  '/roommate.js?v=__BUILD_VERSION__',
+  '/republicas.js?v=__BUILD_VERSION__',
   '/icon.svg',
   '/manifest.json'
 ];

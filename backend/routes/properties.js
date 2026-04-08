@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Property = require('../models/Property');
 const Lead = require('../models/Lead');
+const OwnerNotification = require('../models/OwnerNotification');
 const authMiddleware = require('../middleware/auth');
 const { agencyMiddleware } = require('../middleware/auth');
 const connectDB = require('../config/db');
@@ -9,6 +10,8 @@ const connectDB = require('../config/db');
 const rateLimit = require('express-rate-limit');
 const { getLocationData } = require('../services/geolocation');
 const { validateId } = require('../middleware/validateId');
+const User = require('../models/User');
+const emailService = require('../services/emailService');
 
 function requireDB(req, res, next) {
     if (!connectDB.isConnected()) return res.status(503).json({ error: 'Banco de dados não disponível.' });
@@ -124,6 +127,17 @@ router.get('/:id', validateId('id'), async (req, res) => {
             return res.status(404).json({ error: 'Imóvel não encontrado' });
         }
 
+        // Notificar proprietário em milestones de visualizações
+        var viewMilestones = [10, 25, 50, 100, 250, 500];
+        if (property.agency && viewMilestones.includes(property.views)) {
+            OwnerNotification.create({
+                owner: property.agency,
+                property: property._id,
+                type: 'view_milestone',
+                message: 'Seu imóvel "' + (property.title || '').substring(0, 50) + '" alcançou ' + property.views + ' visualizações!'
+            }).catch(function(err) { console.error('View notification error:', err.message); });
+        }
+
         // Auto-fetch nearby POIs if not cached or stale (>7 days)
         var needsUpdate = !property.nearbyPOIs || !property.nearbyUpdatedAt ||
             (Date.now() - new Date(property.nearbyUpdatedAt).getTime() > 7 * 24 * 60 * 60 * 1000);
@@ -176,9 +190,9 @@ router.post('/', authMiddleware, agencyMiddleware, async (req, res) => {
                         longitude: locationData.longitude,
                         nearbyPOIs: locationData.nearbyPOIs,
                         nearbyUpdatedAt: new Date()
-                    }).catch(function() {});
+                    }).catch(function(err) { console.error('Geocoding update error:', err.message); });
                 }
-            }).catch(function() {});
+            }).catch(function(err) { console.error('Geocoding fetch error:', err.message); });
         }
 
         res.status(201).json(property);
@@ -267,6 +281,23 @@ router.post('/:id/lead', validateId('id'), leadLimiter, async (req, res) => {
             property: property._id,
             agency: property.agency
         });
+
+        // Notificar proprietário sobre novo lead
+        if (property.agency) {
+            OwnerNotification.create({
+                owner: property.agency,
+                property: property._id,
+                type: 'new_lead',
+                message: (name || 'Alguém').substring(0, 30) + ' demonstrou interesse no seu imóvel "' + (property.title || '').substring(0, 40) + '"!'
+            }).catch(function(err) { console.error('Lead notification error:', err.message); });
+
+            // Enviar email para o proprietário/imobiliária
+            User.findById(property.agency).then(function(owner) {
+                if (owner) {
+                    emailService.sendNewLeadEmail(owner.email, owner.name, property.title, name, phone);
+                }
+            }).catch(function(err) { console.error('Lead email error:', err.message); });
+        }
 
         res.status(201).json({ message: 'Contato enviado com sucesso! A imobiliária entrará em contato.', lead });
     } catch (e) {

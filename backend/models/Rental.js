@@ -8,6 +8,7 @@ const rentalSchema = new mongoose.Schema({
     platformFee: { type: Number, default: 0.08 }, // 8%
     feeAmount: { type: Number },
     totalPerTenant: { type: Number },
+    dueDay: { type: Number, default: 10, min: 1, max: 28 },
     status: { type: String, enum: ['active', 'pending', 'ended'], default: 'pending' },
     startDate: { type: Date },
     payments: [{

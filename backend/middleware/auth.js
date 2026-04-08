@@ -45,7 +45,7 @@ async function adminMiddleware(req, res, next) {
 }
 
 async function agencyMiddleware(req, res, next) {
-    if (req.user.role !== 'agency' && req.user.role !== 'admin' && req.user.role !== 'owner') {
+    if (req.user.role !== 'agency' && req.user.role !== 'admin') {
         return res.status(403).json({ error: 'Acesso negado.' });
     }
     next();

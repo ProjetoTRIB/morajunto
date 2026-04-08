@@ -50,13 +50,5 @@ router.get('/payments', async (req, res) => {
     }
 });
 
-// POST /api/tenant/payments/:rentalId/:paymentId/pay — DESABILITADO (usar Mercado Pago)
-// Endpoint antigo de pagamento simulado removido por segurança.
-// Pagamentos devem ser feitos exclusivamente via Mercado Pago PIX.
-router.post('/payments/:rentalId/:paymentId/pay', validateId('rentalId'), validateId('paymentId'), async (req, res) => {
-    return res.status(403).json({
-        error: 'Pagamento simulado desabilitado. Use o sistema de pagamento via PIX (Mercado Pago).'
-    });
-});
 
 module.exports = router;

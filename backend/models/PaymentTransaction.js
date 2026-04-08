@@ -19,6 +19,7 @@ const paymentTransactionSchema = new mongoose.Schema({
     pixQrCodeBase64: { type: String },
     status: { type: String, enum: ['pending', 'paid', 'failed', 'refunded'], default: 'pending' },
     confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    dueDate: { type: Date },
     paidAt: { type: Date },
     // Commission tracking
     agentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

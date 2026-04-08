@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const Property = require('../models/Property');
+const Rental = require('../models/Rental');
 const AgentCommission = require('../models/AgentCommission');
 
 const TIERS = [
@@ -29,7 +30,10 @@ function getNextTier(currentTierName) {
 
 async function recalcAgentTier(userId) {
     var activeListings = await Property.countDocuments({ agency: userId, status: 'active' });
-    var totalRentals = await Property.countDocuments({ agency: userId, status: 'rented' });
+    var agentPropertyIds = await Property.find({ agency: userId }).distinct('_id');
+    var totalRentals = agentPropertyIds.length > 0
+        ? await Rental.countDocuments({ property: { $in: agentPropertyIds }, status: 'active' })
+        : 0;
     var tier = calculateTier(activeListings, totalRentals);
     await User.findByIdAndUpdate(userId, {
         'agentProfile.tier': tier.name,

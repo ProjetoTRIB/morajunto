@@ -29,7 +29,7 @@
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="icon.svg">
-    <meta name="theme-color" content="#4338CA">
+    <meta name="theme-color" content="#0F0D1A">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="MoraJunto">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -37,9 +37,9 @@
     <!-- Fonts & Styles -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500;600&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css?v=v1">
+    <link rel="stylesheet" href="style.css?v=__BUILD_VERSION__">
 
     <!-- JSON-LD Structured Data for SEO -->
     <script type="application/ld+json">
@@ -74,6 +74,9 @@
             }
         }
     }
+    </script>
+    <script>
+    // Service worker cleanup removed — was aggressively unregistering on every load
     </script>
 </head>
 <body>
@@ -113,6 +116,14 @@
                 <a href="#" id="navTenant" onclick="showPage('tenant')" class="hidden">Meu Aluguel</a>
                 <a href="#" id="navAgency" onclick="showPage('agency')" class="hidden">Painel</a>
                 <a href="#" id="navAdmin" onclick="showPage('admin')" class="hidden nav-admin-link">Admin</a>
+                <a href="#" id="navNotifications" class="hidden nav-notif-btn" onclick="toggleNotifDropdown(event)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+                    <span id="notifBadge" class="nav-badge hidden">0</span>
+                </a>
+                <div id="notifDropdown" class="notif-dropdown hidden">
+                    <div class="notif-dropdown-header"><strong>Notificações</strong><a href="#" onclick="markNotifsRead()">Marcar lidas</a></div>
+                    <div id="notifList" class="notif-list"><p class="notif-empty">Nenhuma notificação</p></div>
+                </div>
                 <button class="theme-toggle" id="themeToggle" onclick="toggleDarkMode()" title="Alternar tema">
                     <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
                     <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
@@ -147,7 +158,7 @@
     <div class="page active" id="page-home">
 
         <!-- Hero -->
-        <section class="hero hero-bg">
+        <section class="hero hero-bg hero-photo">
             <div class="hero-overlay"></div>
             <div class="container hero-inner">
                 <!-- Live social proof -->
@@ -156,7 +167,7 @@
                     <span id="heroLiveCount">23 pessoas</span> buscando moradia agora em Ribeirão
                 </div>
 
-                <h1 class="hero-title">Aluguel caro demais?<br><span class="hero-title-accent">Divida e economize R$900/mês</span></h1>
+                <h1 class="hero-title">Aluguel caro demais?<br><span class="hero-title-accent">Divida e economize <span class="hero-shimmer-value">R$900/mês</span></span></h1>
                 <p class="hero-subtitle">Match por IA + CPF verificado + Repúblicas perto da sua faculdade</p>
 
                 <!-- CTA buttons -->
@@ -164,27 +175,29 @@
                     <button class="btn btn-lg btn-hero-primary hero-btn-pulse" onclick="showPage('roommate')">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-left"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
                         Encontrar roommate grátis
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-arrow"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>
                     </button>
-                    <button class="btn btn-lg btn-hero-secondary" onclick="showPage('republicas')">Ver repúblicas</button>
+                    <button class="btn btn-lg btn-hero-secondary" onclick="showPage('republicas')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-left"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        Ver repúblicas
+                    </button>
                 </div>
 
                 <!-- Trust badges -->
                 <div class="hero-trust-row">
-                    <span class="hero-trust-item">
+                    <span class="hero-trust-pill">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                         CPF verificado
                     </span>
-                    <span class="hero-trust-item">
+                    <span class="hero-trust-pill">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                         100% grátis
                     </span>
-                    <span class="hero-trust-item">
+                    <span class="hero-trust-pill">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                         Ribeirão Preto
                     </span>
                 </div>
-
-                <!-- Mini CTA Referral (removido) -->
 
                 <!-- University quick tags -->
                 <div class="search-quick-tags">
@@ -201,23 +214,32 @@
         <!-- Stats Bar -->
         <div class="stats-bar-wrap">
             <div class="stats-bar">
-                <div class="stat-item">
-                    <span class="stat-val stat-val-accent" id="statPeople">127</span>
+                <div class="stat-card stat-card-accent">
+                    <div class="stat-card-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                    </div>
+                    <span class="stat-val stat-val-accent" id="statPeople" data-countup="127">127</span>
                     <span class="stat-label">pessoas buscando</span>
                 </div>
-                <div class="stat-sep"></div>
-                <div class="stat-item">
-                    <span class="stat-val stat-val-green">R$900</span>
+                <div class="stat-card stat-card-green">
+                    <div class="stat-card-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                    </div>
+                    <span class="stat-val stat-val-green" data-countup="900" data-prefix="R$">R$900</span>
                     <span class="stat-label">economia média/mês</span>
                 </div>
-                <div class="stat-sep"></div>
-                <div class="stat-item">
-                    <span class="stat-val stat-val-amber" id="statProperties">0</span>
+                <div class="stat-card stat-card-amber">
+                    <div class="stat-card-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    </div>
+                    <span class="stat-val stat-val-amber" id="statProperties" data-countup="0">0</span>
                     <span class="stat-label">imóveis disponíveis</span>
                 </div>
-                <div class="stat-sep"></div>
-                <div class="stat-item">
-                    <span class="stat-val stat-val-accent">5</span>
+                <div class="stat-card stat-card-accent">
+                    <div class="stat-card-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1 4 3 6 3s6-2 6-3v-5"/></svg>
+                    </div>
+                    <span class="stat-val stat-val-accent" data-countup="5">5</span>
                     <span class="stat-label">universidades</span>
                 </div>
             </div>
@@ -299,26 +321,34 @@
                     <h2 class="sec-title">Como funciona</h2>
                     <p class="sec-sub">Em 3 passos você encontra alguém de confiança para dividir aluguel</p>
                 </div>
-                <div class="steps-grid reveal reveal-delay-1">
-                    <div class="step-card">
-                        <div class="step-num">01</div>
-                        <div class="step-icon">
+                <div class="steps-timeline reveal reveal-delay-1">
+                    <div class="step-card step-card-v2">
+                        <div class="step-num-v2">
+                            <span>01</span>
+                            <div class="step-connector"></div>
+                        </div>
+                        <div class="step-icon-circle step-icon-accent">
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                         </div>
                         <h3>Crie seu perfil</h3>
                         <p>Cadastre-se com CPF, conecte Instagram e conte seu estilo de vida: rotina, orçamento, faculdade.</p>
                     </div>
-                    <div class="step-card">
-                        <div class="step-num">02</div>
-                        <div class="step-icon">
+                    <div class="step-card step-card-v2">
+                        <div class="step-num-v2">
+                            <span>02</span>
+                            <div class="step-connector"></div>
+                        </div>
+                        <div class="step-icon-circle step-icon-green">
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
                         </div>
                         <h3>Receba matches</h3>
                         <p>Nossa IA cruza perfis e sugere pessoas compatíveis. Veja score de compatibilidade antes de conversar.</p>
                     </div>
-                    <div class="step-card">
-                        <div class="step-num">03</div>
-                        <div class="step-icon">
+                    <div class="step-card step-card-v2">
+                        <div class="step-num-v2">
+                            <span>03</span>
+                        </div>
+                        <div class="step-icon-circle step-icon-amber">
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                         </div>
                         <h3>Divida o aluguel</h3>
@@ -427,7 +457,8 @@
                     <p class="sec-sub">Histórias reais de quem encontrou o colega ideal</p>
                 </div>
                 <div class="testimonials-grid">
-                    <div class="testimonial-card">
+                    <div class="testimonial-card testimonial-card-v2">
+                        <div class="testimonial-quote-mark">"</div>
                         <div class="testimonial-stars">★★★★★</div>
                         <p class="testimonial-text">"Achei minha colega de apto em 3 dias! A Ana tem os mesmos horários que eu e dividimos tudo certinho. Melhor decisão que tomei."</p>
                         <div class="testimonial-author">
@@ -435,7 +466,8 @@
                             <div><strong class="testimonial-name">Camila S.</strong><span class="testimonial-role">Estudante de Medicina — USP</span></div>
                         </div>
                     </div>
-                    <div class="testimonial-card">
+                    <div class="testimonial-card testimonial-card-v2">
+                        <div class="testimonial-quote-mark">"</div>
                         <div class="testimonial-stars">★★★★★</div>
                         <p class="testimonial-text">"Tinha medo de dividir apto com desconhecido. O perfil verificado me deu confiança. Moro com o Lucas há 6 meses, zero problemas."</p>
                         <div class="testimonial-author">
@@ -443,7 +475,8 @@
                             <div><strong class="testimonial-name">Rafael M.</strong><span class="testimonial-role">Desenvolvedor — Remoto</span></div>
                         </div>
                     </div>
-                    <div class="testimonial-card">
+                    <div class="testimonial-card testimonial-card-v2">
+                        <div class="testimonial-quote-mark">"</div>
                         <div class="testimonial-stars">★★★★★</div>
                         <p class="testimonial-text">"Economizo R$900 por mês dividindo apto. A plataforma me conectou com meninas do mesmo curso. Super recomendo!"</p>
                         <div class="testimonial-author">
@@ -465,20 +498,20 @@
                     <p class="numbers-subtitle">Por que dividir apto faz sentido aqui</p>
                 </div>
                 <div class="numbers-grid">
-                    <div class="number-item">
-                        <div class="number-value number-value-indigo">700k</div>
+                    <div class="number-item number-item-v2">
+                        <div class="number-value number-value-indigo" data-countup="700" data-suffix="k">700k</div>
                         <div class="number-label">habitantes</div>
                     </div>
-                    <div class="number-item">
-                        <div class="number-value number-value-green">50k+</div>
+                    <div class="number-item number-item-v2">
+                        <div class="number-value number-value-green" data-countup="50" data-suffix="k+">50k+</div>
                         <div class="number-label">estudantes universitários</div>
                     </div>
-                    <div class="number-item">
-                        <div class="number-value number-value-amber">61%</div>
+                    <div class="number-item number-item-v2">
+                        <div class="number-value number-value-amber" data-countup="61" data-suffix="%">61%</div>
                         <div class="number-label">aumento em aluguéis (2026)</div>
                     </div>
-                    <div class="number-item">
-                        <div class="number-value number-value-pink">R$750</div>
+                    <div class="number-item number-item-v2">
+                        <div class="number-value number-value-pink" data-countup="750" data-prefix="R$">R$750</div>
                         <div class="number-label">economia média ao dividir</div>
                     </div>
                 </div>
@@ -486,18 +519,18 @@
         </section>
 
         <!-- CTA Final -->
-        <section class="section cta-section">
+        <section class="section cta-section cta-section-v2">
             <div class="container cta-container">
-                <h2 class="cta-title">Pronto para encontrar seu <span class="gradient-text">colega ideal</span>?</h2>
-                <p class="cta-text">Milhares de pessoas em Ribeirão Preto estão procurando alguém de confiança para dividir o aluguel. Crie seu perfil em 2 minutos.</p>
+                <h2 class="cta-title cta-title-v2">Pronto para encontrar seu <span class="gradient-text">colega ideal</span>?</h2>
+                <p class="cta-text cta-text-v2">Milhares de pessoas em Ribeirão Preto estão procurando alguém de confiança para dividir o aluguel. Crie seu perfil em 2 minutos.</p>
                 <div class="cta-buttons">
-                    <button class="btn btn-accent btn-lg btn-cta-primary" onclick="showPage('roommate')">
+                    <button class="btn btn-lg btn-cta-primary-v2" onclick="showPage('roommate')">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
                         Criar meu perfil grátis
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>
                     </button>
-                    <button class="btn btn-outline btn-lg btn-cta-secondary" onclick="showPage('guide')">Como funciona</button>
                 </div>
-                <p class="cta-footnote">Gratuito · Sem compromisso · Ribeirão Preto</p>
+                <p class="cta-footnote cta-footnote-v2">Gratuito · Sem compromisso · Ribeirão Preto</p>
             </div>
         </section>
 
@@ -675,10 +708,10 @@
                     </div>
                     <div class="footer-col">
                         <h4 class="footer-col-title">Bairros populares</h4>
-                        <a href="#" onclick="quickSearch('jardim sumare')" class="footer-link">Jd. Sumaré</a>
-                        <a href="#" onclick="quickSearch('ribeirania')" class="footer-link">Ribeirânia</a>
-                        <a href="#" onclick="quickSearch('centro')" class="footer-link">Centro</a>
-                        <a href="#" onclick="quickSearch('lagoinha')" class="footer-link">Lagoinha</a>
+                        <a href="#" onclick="event.preventDefault();document.getElementById('searchInput').value='Jd. Sumaré';showPage('home');document.getElementById('searchInput').dispatchEvent(new Event('input'))" class="footer-link">Jd. Sumaré</a>
+                        <a href="#" onclick="event.preventDefault();document.getElementById('searchInput').value='Ribeirânia';showPage('home');document.getElementById('searchInput').dispatchEvent(new Event('input'))" class="footer-link">Ribeirânia</a>
+                        <a href="#" onclick="event.preventDefault();document.getElementById('searchInput').value='Centro';showPage('home');document.getElementById('searchInput').dispatchEvent(new Event('input'))" class="footer-link">Centro</a>
+                        <a href="#" onclick="event.preventDefault();document.getElementById('searchInput').value='Lagoinha';showPage('home');document.getElementById('searchInput').dispatchEvent(new Event('input'))" class="footer-link">Lagoinha</a>
                     </div>
                     <div class="footer-col">
                         <h4 class="footer-col-title">Contato</h4>
@@ -1205,8 +1238,13 @@
                             </div>
                             <div class="form-row">
                                 <div class="form-field">
-                                    <label>URLs das fotos (uma por linha)</label>
-                                    <textarea id="propImages" placeholder="https://exemplo.com/foto1.jpg&#10;https://exemplo.com/foto2.jpg" rows="3"></textarea>
+                                    <label>Fotos do imóvel (até 10 imagens)</label>
+                                    <input type="file" id="propImageFiles" accept="image/jpeg,image/png,image/webp" multiple style="margin-bottom:8px">
+                                    <div id="propImagePreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px"></div>
+                                    <details style="font-size:.85rem;color:var(--text-secondary)">
+                                        <summary>Ou cole URLs de fotos</summary>
+                                        <textarea id="propImages" placeholder="https://exemplo.com/foto1.jpg&#10;https://exemplo.com/foto2.jpg" rows="3" style="margin-top:6px"></textarea>
+                                    </details>
                                 </div>
                             </div>
                             <div class="form-actions">
@@ -1662,6 +1700,18 @@
                                 <div class="form-field">
                                     <label>Orçamento máximo (R$/mês)</label>
                                     <input type="number" id="rmBudget" placeholder="Ex: 1500" required>
+                                </div>
+                            </div>
+                            <div class="form-field">
+                                <label>Renda mensal</label>
+                                <input type="hidden" id="rmSalary" value="">
+                                <div class="rm-income-options" id="rmIncomeOptions">
+                                    <button type="button" class="rm-income-btn" data-val="1500" onclick="selectIncome(this)">Até R$ 1.500</button>
+                                    <button type="button" class="rm-income-btn" data-val="2500" onclick="selectIncome(this)">R$ 1.500 — 2.500</button>
+                                    <button type="button" class="rm-income-btn" data-val="4000" onclick="selectIncome(this)">R$ 2.500 — 4.000</button>
+                                    <button type="button" class="rm-income-btn" data-val="6000" onclick="selectIncome(this)">R$ 4.000 — 6.000</button>
+                                    <button type="button" class="rm-income-btn" data-val="10000" onclick="selectIncome(this)">R$ 6.000 — 10.000</button>
+                                    <button type="button" class="rm-income-btn" data-val="15000" onclick="selectIncome(this)">Acima de R$ 10.000</button>
                                 </div>
                             </div>
                             <div class="form-row-2">
@@ -2247,6 +2297,7 @@
                     <button class="dash-tab" onclick="switchOwnerTab('add',this)">Cadastrar Imóvel</button>
                     <button class="dash-tab" onclick="switchOwnerTab('rentals',this)">Aluguéis</button>
                     <button class="dash-tab" onclick="switchOwnerTab('pix',this)">Recebimento</button>
+                    <button class="dash-tab" onclick="switchOwnerTab('notifications',this);loadOwnerNotifications()">Notificações <span id="ownerNotifBadge" class="nav-badge hidden" style="margin-left:4px">0</span></button>
                 </div>
 
                 <!-- Tab: Imóveis -->
@@ -2441,6 +2492,20 @@
                         </div>
                     </div>
                 </div>
+                <!-- Tab: Notificações -->
+                <div id="ownerTab-notifications" class="hidden">
+                    <div class="owner-form-card">
+                        <h3 class="owner-form-title" style="display:flex;align-items:center;gap:0.5rem">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+                            Notificações
+                        </h3>
+                        <p style="color:var(--text-secondary);font-size:0.9rem;margin:0 0 1.5rem">Acompanhe visualizações e interesses nos seus imóveis</p>
+                        <div id="ownerNotifications" class="owner-notif-list">
+                            <p class="empty-state-text">Carregando...</p>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -2453,6 +2518,7 @@
                 <p class="panel-subtitle">Pagamentos e informações do seu aluguel</p>
 
                 <div id="tenantContent">
+                    <div id="tenantTransparency" class="hidden"></div>
                     <div id="tenantPayments"></div>
                     <div id="tenantEmpty" class="tenant-empty-state">
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--border)" stroke-width="1.5" class="tenant-empty-icon"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -2635,6 +2701,69 @@
                     <div class="lp-number">
                         <span class="lp-number-val">8%</span>
                         <span class="lp-number-label">taxa cobrada do inquilino (não sua)</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Calculadora de Renda do Proprietário -->
+        <section class="section" id="lp-calculadora">
+            <div class="container">
+                <div class="sec-head center">
+                    <h2>Simule quanto você recebe</h2>
+                    <p class="sec-sub">Veja na prática: você recebe o valor integral. A taxa é do inquilino.</p>
+                </div>
+                <div class="owner-calc-card">
+                    <div class="owner-calc-inputs">
+                        <div class="form-field">
+                            <label>Valor do aluguel</label>
+                            <div class="owner-calc-price-wrap">
+                                <span class="owner-calc-prefix">R$</span>
+                                <input type="range" id="ownerCalcPrice" min="500" max="5000" step="50" value="2000" oninput="calcOwnerRevenue();document.getElementById('ownerCalcPriceLabel').textContent='R$ '+this.value">
+                                <span class="owner-calc-price-label" id="ownerCalcPriceLabel">R$ 2000</span>
+                            </div>
+                        </div>
+                        <div class="form-field">
+                            <label>Número de inquilinos</label>
+                            <div class="owner-calc-tenants-wrap">
+                                <button type="button" class="owner-calc-btn" onclick="var i=document.getElementById('ownerCalcTenants');i.value=Math.max(1,parseInt(i.value)-1);calcOwnerRevenue()">-</button>
+                                <input type="number" id="ownerCalcTenants" value="3" min="1" max="10" readonly class="owner-calc-tenant-input">
+                                <button type="button" class="owner-calc-btn" onclick="var i=document.getElementById('ownerCalcTenants');i.value=Math.min(10,parseInt(i.value)+1);calcOwnerRevenue()">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="owner-calc-results">
+                        <div class="owner-calc-main">
+                            <span class="owner-calc-label">Você recebe</span>
+                            <span class="owner-calc-value owner-calc-value-green" id="ownerCalcReceives">R$ 2.000</span>
+                            <span class="owner-calc-note">100% do aluguel — zero comissão</span>
+                        </div>
+                        <div class="owner-calc-bar-wrap">
+                            <div class="owner-calc-bar-bg">
+                                <div class="owner-calc-bar-fill" id="ownerCalcBar" style="width:93%"></div>
+                            </div>
+                            <div class="owner-calc-bar-labels">
+                                <span class="owner-calc-bar-label-green">Proprietário: 100%</span>
+                                <span class="owner-calc-bar-label-gray">Taxa inquilino: 8%</span>
+                            </div>
+                        </div>
+                        <div class="owner-calc-details">
+                            <div class="owner-calc-detail">
+                                <span>Cada inquilino paga</span>
+                                <strong id="ownerCalcPerTenant">R$ 720</strong>
+                            </div>
+                            <div class="owner-calc-detail">
+                                <span>Dividido entre</span>
+                                <strong id="ownerCalcTenantCount">3 inquilinos</strong>
+                            </div>
+                            <div class="owner-calc-detail">
+                                <span>Taxa da plataforma (paga pelo inquilino)</span>
+                                <strong id="ownerCalcFee">R$ 160</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="center" style="margin-top:24px">
+                        <button class="btn btn-accent btn-lg" onclick="showLoginModal('register','owner')">Anunciar meu imóvel — grátis</button>
                     </div>
                 </div>
             </div>
@@ -3133,8 +3262,8 @@
 
     // Owner panel
     function switchOwnerTab(tab, btn) {
-        var tabMap = {properties:0, add:1, rentals:2, pix:3};
-        ['properties','add','rentals','pix'].forEach(function(t){
+        var tabMap = {properties:0, add:1, rentals:2, pix:3, notifications:4};
+        ['properties','add','rentals','pix','notifications'].forEach(function(t){
             var el = document.getElementById('ownerTab-'+t);
             if(!el) return;
             if(t===tab){el.classList.remove('hidden');el.style.display='';}
@@ -3150,6 +3279,7 @@
         }
         // Carregar PIX ao abrir aba
         if (tab === 'pix') loadOwnerPix();
+        if (tab === 'notifications') loadOwnerNotifications();
     }
     // ===== OWNER PIX =====
     async function loadOwnerPix() {
@@ -3261,6 +3391,18 @@
         } catch(e) {}
         loadOwnerProperties();
         loadOwnerRentals();
+        // Carregar contagem de notificações não lidas
+        try {
+            var notifRes = await fetch(API + '/owner/notifications/unread-count', { headers: { 'Authorization': 'Bearer ' + currentToken }});
+            var notifData = await notifRes.json();
+            var badge = document.getElementById('ownerNotifBadge');
+            if (badge && notifData.count > 0) {
+                badge.textContent = notifData.count;
+                badge.classList.remove('hidden');
+            } else if (badge) {
+                badge.classList.add('hidden');
+            }
+        } catch(e) {}
     }
     async function loadOwnerProperties() {
         try {
@@ -3393,6 +3535,7 @@
     // Tenant panel — uses new /api/payments system
     async function loadTenantPanel() {
         if (!currentToken) return;
+        loadTransparencyPanel();
         try {
             var res = await fetch(API + '/payments/tenant', { headers: { 'Authorization': 'Bearer ' + currentToken }});
             var data = await res.json();
@@ -3517,6 +3660,152 @@
         }, 3000);
     }
 
+    // ===== TRANSPARENCY PANEL =====
+    async function loadTransparencyPanel() {
+        if (!currentToken) return;
+        var panel = document.getElementById('tenantTransparency');
+        if (!panel) return;
+        try {
+            var rentalRes = await fetch(API + '/tenant/rentals', { headers: { 'Authorization': 'Bearer ' + currentToken }});
+            var rentalData = await rentalRes.json();
+            var rentals = rentalData.rentals || [];
+            if (!rentals.length) { panel.classList.add('hidden'); return; }
+
+            var rental = rentals[0];
+            var month = new Date().toISOString().substring(0, 7);
+            var res = await fetch(API + '/payments/rental/' + rental._id + '/status?month=' + month, {
+                headers: { 'Authorization': 'Bearer ' + currentToken }
+            });
+            if (!res.ok) { panel.classList.add('hidden'); return; }
+            var data = await res.json();
+            if (!data.tenants || !data.tenants.length) { panel.classList.add('hidden'); return; }
+
+            panel.classList.remove('hidden');
+            var paidCount = data.summary.paidCount;
+            var totalCount = data.summary.totalCount;
+            var pct = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
+
+            var badgeMap = { ouro: '🥇', prata: '🥈', bronze: '🥉', none: '' };
+            var monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            var mp = data.month.split('-');
+            var monthLabel = monthNames[parseInt(mp[1])-1] + '/' + mp[0];
+
+            var html = '<div class="transparency-card">';
+            html += '<div class="transparency-header"><h3>Divisão do mês — ' + monthLabel + '</h3>';
+            html += '<span class="transparency-summary">' + paidCount + ' de ' + totalCount + ' pagaram</span></div>';
+            html += '<div class="transparency-progress"><div class="transparency-bar" style="width:' + pct + '%"></div></div>';
+            html += '<div class="transparency-amounts">';
+            html += '<span>R$ ' + data.summary.totalReceived + ' recebido</span>';
+            html += '<span>R$ ' + data.summary.totalPending + ' pendente</span></div>';
+            html += '<div class="transparency-tenants">';
+            data.tenants.forEach(function(t) {
+                var isPaid = t.status === 'paid';
+                var statusIcon = isPaid ? '<span class="t-status t-paid">✓</span>' : '<span class="t-status t-pending">⏳</span>';
+                var badge = badgeMap[t.badge] || '';
+                var paidInfo = isPaid && t.paidAt ? 'Pago em ' + new Date(t.paidAt).toLocaleDateString('pt-BR') : 'Vence dia ' + (data.dueDay || 10);
+                html += '<div class="transparency-tenant ' + (isPaid ? 'tenant-ok' : 'tenant-wait') + '">';
+                html += '<div class="t-info"><div class="t-avatar">' + escapeHtml(t.name.charAt(0).toUpperCase()) + '</div>';
+                html += '<div><div class="t-name">' + escapeHtml(t.name) + ' ' + badge + '</div>';
+                html += '<div class="t-detail">' + paidInfo + ' · R$ ' + t.amount + '</div></div></div>';
+                html += statusIcon;
+                if (isPaid && t.transactionId) {
+                    html += ' <button class="btn-receipt" onclick="showReceipt(\'' + t.transactionId + '\')">Recibo</button>';
+                }
+                html += '</div>';
+            });
+            html += '</div></div>';
+            panel.innerHTML = html;
+        } catch(e) { panel.classList.add('hidden'); }
+    }
+
+    // ===== RECEIPT =====
+    async function showReceipt(txId) {
+        try {
+            var res = await fetch(API + '/payments/' + txId + '/receipt', { headers: { 'Authorization': 'Bearer ' + currentToken }});
+            if (!res.ok) { showToast('Erro ao carregar recibo', 'error'); return; }
+            var r = await res.json();
+            var html = '<div style="text-align:center;padding:20px">';
+            html += '<h3 style="margin-bottom:16px;color:var(--accent)">Recibo MoraJunto</h3>';
+            html += '<div style="background:var(--bg-alt);border-radius:12px;padding:16px;text-align:left;font-size:0.9rem">';
+            html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Número</span><strong>' + escapeHtml(r.receiptNumber) + '</strong></div>';
+            html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Data</span><strong>' + r.date + '</strong></div>';
+            html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Mês ref.</span><strong>' + escapeHtml(r.month) + '</strong></div>';
+            html += '<hr style="border:none;border-top:1px solid var(--border);margin:12px 0">';
+            html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Inquilino</span><strong>' + escapeHtml(r.tenant.name) + '</strong></div>';
+            html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>CPF</span><strong>' + escapeHtml(r.tenant.cpf) + '</strong></div>';
+            html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Proprietário</span><strong>' + escapeHtml(r.owner.name) + '</strong></div>';
+            html += '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Imóvel</span><strong>' + escapeHtml(r.property.title) + '</strong></div>';
+            html += '<hr style="border:none;border-top:1px solid var(--border);margin:12px 0">';
+            html += '<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Aluguel</span><span>R$ ' + r.rentAmount + '</span></div>';
+            html += '<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Taxa (' + r.feePercent + '%)</span><span>R$ ' + r.platformFee + '</span></div>';
+            html += '<div style="display:flex;justify-content:space-between;margin-bottom:4px;font-weight:700;font-size:1rem"><span>Total pago</span><span style="color:var(--green)">R$ ' + r.totalPaid + '</span></div>';
+            html += '<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Via</span><span>' + r.paymentMethod + '</span></div>';
+            html += '</div></div>';
+            showCustomModalHTML('Recibo de Pagamento', html);
+        } catch(e) { showToast('Erro ao carregar recibo', 'error'); }
+    }
+
+    // ===== NOTIFICATIONS =====
+    async function loadNotifCount() {
+        if (!currentToken) return;
+        try {
+            var res = await fetch(API + '/notifications/unread-count', { headers: { 'Authorization': 'Bearer ' + currentToken }});
+            var data = await res.json();
+            var badge = document.getElementById('notifBadge');
+            if (badge) {
+                if (data.count > 0) { badge.textContent = data.count; badge.classList.remove('hidden'); }
+                else { badge.classList.add('hidden'); }
+            }
+        } catch(e) {}
+    }
+
+    async function loadNotifList() {
+        if (!currentToken) return;
+        try {
+            var res = await fetch(API + '/notifications', { headers: { 'Authorization': 'Bearer ' + currentToken }});
+            var data = await res.json();
+            var list = document.getElementById('notifList');
+            if (!list) return;
+            var notifs = data.notifications || [];
+            if (!notifs.length) { list.innerHTML = '<p class="notif-empty">Nenhuma notificação</p>'; return; }
+            list.innerHTML = notifs.slice(0, 20).map(function(n) {
+                var timeAgo = getTimeAgo(n.createdAt);
+                var typeIcon = { payment_reminder: '⏰', payment_due: '📅', payment_late: '🚨', payment_received: '💰', roommate_paid: '✅', roommate_late: '⚠️' };
+                return '<div class="notif-item' + (n.read ? '' : ' notif-unread') + '">' +
+                    '<span class="notif-icon">' + (typeIcon[n.type] || '🔔') + '</span>' +
+                    '<div class="notif-body"><div class="notif-title">' + escapeHtml(n.title) + '</div>' +
+                    '<div class="notif-msg">' + escapeHtml(n.message) + '</div>' +
+                    '<div class="notif-time">' + timeAgo + '</div></div></div>';
+            }).join('');
+        } catch(e) {}
+    }
+
+    function toggleNotifDropdown(e) {
+        if (e) e.preventDefault();
+        var dd = document.getElementById('notifDropdown');
+        if (!dd) return;
+        dd.classList.toggle('hidden');
+        if (!dd.classList.contains('hidden')) loadNotifList();
+    }
+
+    async function markNotifsRead() {
+        if (!currentToken) return;
+        try {
+            await fetch(API + '/notifications/read', { method: 'POST', headers: { 'Authorization': 'Bearer ' + currentToken }});
+            loadNotifCount();
+            loadNotifList();
+        } catch(e) {}
+    }
+
+    // Close notif dropdown on outside click
+    document.addEventListener('click', function(e) {
+        var dd = document.getElementById('notifDropdown');
+        var btn = document.getElementById('navNotifications');
+        if (dd && !dd.classList.contains('hidden') && !dd.contains(e.target) && btn && !btn.contains(e.target)) {
+            dd.classList.add('hidden');
+        }
+    });
+
     // ===== CHAT SYSTEM =====
     // ===== CHAT SYSTEM (WhatsApp-style + Socket.io) =====
     var currentConversationId = null;
@@ -3595,6 +3884,17 @@
                     document.getElementById('chatHeaderStatus').textContent = 'offline';
                 }
                 updateOnlineStatus(data.userId, false);
+            });
+            // Payment and notification real-time events
+            chatSocket.on('payment-update', function(data) {
+                showToast(data.tenantName + ' pagou o aluguel de ' + data.month + '!', 'success');
+                if (typeof loadTransparencyPanel === 'function') loadTransparencyPanel();
+                if (typeof loadTenantPanel === 'function') loadTenantPanel();
+                if (typeof loadNotifCount === 'function') loadNotifCount();
+            });
+            chatSocket.on('notification', function(data) {
+                showToast(data.title, 'info');
+                if (typeof loadNotifCount === 'function') loadNotifCount();
             });
         };
         document.head.appendChild(script);
@@ -4291,21 +4591,15 @@
         </button>
     </nav>
 
-    <script src="script.js?v=v1"></script>
-    <script src="roommate.js?v=v1"></script>
-    <script src="republicas.js?v=v1"></script>
+    <script src="script.js?v=__BUILD_VERSION__"></script>
+    <script src="roommate.js?v=__BUILD_VERSION__"></script>
+    <script src="republicas.js?v=__BUILD_VERSION__"></script>
     <script>
-    // Service Worker — force update and clear old caches
+    // Service Worker — register and let SW handle its own cache cleanup
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
-            regs.forEach(function(reg) { reg.update(); });
-        });
-        caches.keys().then(function(keys) {
-            keys.forEach(function(k) {
-                if (k !== 'morajunto-v1') caches.delete(k);
-            });
-        });
-        navigator.serviceWorker.register('/sw.js').catch(function(){});
+        navigator.serviceWorker.register('/sw.js').then(function(reg) {
+            reg.update();
+        }).catch(function(){});
     }
 
     // Scroll reveal animations

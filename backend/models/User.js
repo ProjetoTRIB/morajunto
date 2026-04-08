@@ -80,6 +80,16 @@ var userSchema = new mongoose.Schema({
     pixKey: { type: String, default: '' },
     pixKeyType: { type: String, enum: ['', 'cpf', 'email', 'telefone', 'aleatoria'], default: '' },
 
+    // Payment score (bom pagador)
+    paymentScore: {
+        totalOnTime: { type: Number, default: 0 },
+        totalLate: { type: Number, default: 0 },
+        totalMissed: { type: Number, default: 0 },
+        score: { type: Number, default: 0 },
+        badge: { type: String, enum: ['none', 'bronze', 'prata', 'ouro'], default: 'none' },
+        streakMonths: { type: Number, default: 0 }
+    },
+
     matches: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     likedProfiles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     dislikedProfiles: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

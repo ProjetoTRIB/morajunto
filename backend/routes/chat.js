@@ -5,6 +5,7 @@ const User = require('../models/User');
 const Property = require('../models/Property');
 const authMiddleware = require('../middleware/auth');
 const { validateId } = require('../middleware/validateId');
+const Notification = require('../models/Notification');
 
 router.use(authMiddleware);
 
@@ -265,15 +266,29 @@ router.post('/conversations/:id/messages', validateId('id'), async (req, res) =>
         // Emit real-time event via Socket.io
         var io = req.app.get('io');
         var onlineUsers = req.app.get('onlineUsers');
+        var recipientOnline = false;
         if (io && otherId) {
             var recipientSocket = onlineUsers.get(otherId.toString());
             if (recipientSocket) {
+                recipientOnline = true;
                 io.to(recipientSocket).emit('new-message', {
                     conversationId: conversation._id,
                     message: message,
                     senderName: sender ? sender.name : 'Usuário'
                 });
             }
+        }
+
+        // Create notification if recipient is offline
+        if (otherId && !recipientOnline) {
+            try {
+                await Notification.create({
+                    user: otherId, type: 'new_message',
+                    title: 'Nova mensagem',
+                    message: (sender ? sender.name : 'Alguém') + ' enviou uma mensagem.',
+                    metadata: { conversationId: conversation._id }
+                });
+            } catch (notifErr) { console.error('Chat notification error:', notifErr.message); }
         }
 
         res.json({ message: message });

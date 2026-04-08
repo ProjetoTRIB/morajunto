@@ -8,6 +8,7 @@ const authMiddleware = require('../middleware/auth');
 const { adminMiddleware } = require('../middleware/auth');
 const connectDB = require('../config/db');
 const { validateId } = require('../middleware/validateId');
+const emailService = require('../services/emailService');
 
 function requireDB(req, res, next) {
     if (!connectDB.isConnected()) return res.status(503).json({ error: 'Banco de dados não disponível.' });
@@ -27,8 +28,7 @@ router.get('/stats', async (req, res) => {
         var totalAgencies = await User.countDocuments({ role: 'agency' });
         var totalLeads = await Lead.countDocuments();
 
-        res.json({ totalProperties, activeProperties, totalUsers, totalAgencies, totalLeads,
-            properties: totalProperties, agencies: totalAgencies, leads: totalLeads, users: totalUsers });
+        res.json({ totalProperties, activeProperties, totalUsers, totalAgencies, totalLeads });
     } catch (e) {
         res.status(500).json({ error: 'Erro ao buscar estatísticas' });
     }
@@ -52,11 +52,16 @@ router.get('/leads', async (req, res) => {
 router.get('/agencies', async (req, res) => {
     try {
         var agencies = await User.find({ role: 'agency' }).select('-password').sort({ createdAt: -1 });
-        var result = [];
-        for (var a of agencies) {
-            var count = await Property.countDocuments({ agency: a._id });
-            result.push({ _id: a._id, name: a.name, email: a.email, phone: a.phone || '', propertyCount: count, createdAt: a.createdAt });
-        }
+        var agencyIds = agencies.map(function(a) { return a._id; });
+        var counts = await Property.aggregate([
+            { $match: { agency: { $in: agencyIds } } },
+            { $group: { _id: '$agency', count: { $sum: 1 } } }
+        ]);
+        var countMap = {};
+        counts.forEach(function(c) { countMap[c._id.toString()] = c.count; });
+        var result = agencies.map(function(a) {
+            return { _id: a._id, name: a.name, email: a.email, phone: a.phone || '', propertyCount: countMap[a._id.toString()] || 0, createdAt: a.createdAt };
+        });
         res.json({ agencies: result });
     } catch (e) {
         res.status(500).json({ error: 'Erro ao listar imobiliárias' });
@@ -80,7 +85,7 @@ router.get('/properties', async (req, res) => {
 router.put('/properties/:id', validateId('id'), async (req, res) => {
     try {
         var allowedFields = ['title', 'description', 'type', 'transaction', 'price',
-            'condominio', 'condo', 'iptu', 'bedrooms', 'bathrooms', 'parking',
+            'condominio', 'iptu', 'bedrooms', 'bathrooms', 'parking',
             'area', 'address', 'neighborhood', 'city', 'photos', 'images',
             'features', 'status'];
         var updates = {};
@@ -147,6 +152,14 @@ router.put('/verifications/:userId', validateId('userId'), async (req, res) => {
             user.identityVerification.rejectionReason = (reason || 'Documento invalido').substring(0, 200);
         }
         await user.save();
+
+        // Enviar email notificando o usuário
+        emailService.sendVerificationStatusEmail(
+            user.email,
+            user.name,
+            action === 'approve' ? 'approved' : 'rejected',
+            user.identityVerification.rejectionReason
+        );
 
         res.json({ message: action === 'approve' ? 'Identidade aprovada' : 'Verificacao rejeitada' });
     } catch (e) {
