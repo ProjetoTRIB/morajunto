@@ -3909,7 +3909,7 @@ body.dark-mode img {
 .hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(15,10,46,.82) 0%, rgba(67,56,202,.55) 50%, rgba(30,27,75,.78) 100%);
+  background: linear-gradient(160deg, rgba(15,10,46,.85) 0%, rgba(67,56,202,.5) 100%);
   pointer-events: none;
 }
 .hero-inner {
@@ -6206,14 +6206,7 @@ body.dark-mode .lp-testimonial{background:var(--surface);border-color:var(--bord
 }
 
 /* ---- HERO ENHANCEMENTS ---- */
-.hero-photo::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 40%, rgba(15,10,46,.3) 100%);
-  z-index: 1;
-  pointer-events: none;
-}
+/* Removed hero-photo::before — was creating extra dark band */
 
 .hero-count-bump {
   animation: countBump .3s ease;
@@ -6398,7 +6391,7 @@ textarea:focus-visible {
 /* ---- FLOATING REFERRAL BUTTON ---- */
 .referral-fab {
   position: fixed;
-  bottom: 90px;
+  bottom: 20px;
   right: 20px;
   z-index: 900;
   background: linear-gradient(135deg, #10b981, #059669);
@@ -6775,7 +6768,7 @@ textarea:focus-visible {
   .referral-step { font-size: 0.75rem; max-width: 100px; }
   .section-referral-cta { padding: 48px 16px; }
   #page-referral .container > div { grid-template-columns: 1fr !important; }
-  .referral-fab { bottom: 80px; right: 12px; padding: 10px 16px; font-size: 0.8rem; }
+  .referral-fab { bottom: 16px; right: 12px; padding: 10px 16px; font-size: 0.8rem; }
   .referral-fab span { display: none; }
   .referral-fab { border-radius: 50%; padding: 14px; }
   .referral-cta-amount { font-size: 2.5rem; }
