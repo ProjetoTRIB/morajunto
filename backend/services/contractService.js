@@ -131,12 +131,70 @@ function generateContract(data) {
             });
             doc.moveDown(1);
 
+            // ===== CAUÇÃO =====
+            section(doc, 'CLÁUSULA 7ª — DA GARANTIA (CAUÇÃO)');
+            doc.fontSize(10).font('Helvetica');
+            doc.text('7.1. Como garantia das obrigações contratuais, o(s) LOCATÁRIO(S) depositará(ão) caução equivalente a 3 (três) meses de aluguel, no valor total de ' + formatCurrency(rentAmount * 3) + ', a ser pago na assinatura deste contrato.');
+            doc.moveDown(0.3);
+            doc.text('7.2. A caução será devolvida ao final da locação, corrigida pela poupança, descontados eventuais débitos pendentes, danos ao imóvel ou multas contratuais.');
+            doc.moveDown(0.3);
+            doc.text('7.3. As partes podem acordar, alternativamente, outras formas de garantia previstas na Lei 8.245/91 (fiador, seguro-fiança ou cessão fiduciária), mediante aditivo contratual.');
+            doc.moveDown(1);
+
+            // ===== REAJUSTE =====
+            section(doc, 'CLÁUSULA 8ª — DO REAJUSTE');
+            doc.fontSize(10).font('Helvetica');
+            doc.text('8.1. O valor do aluguel será reajustado anualmente, na data-base de aniversário deste contrato, pelo índice IGP-M/FGV acumulado nos últimos 12 meses, ou outro índice que venha a substituí-lo oficialmente.');
+            doc.moveDown(0.3);
+            doc.text('8.2. Caso o índice seja negativo, o valor do aluguel permanecerá inalterado.');
+            doc.moveDown(0.3);
+            doc.text('8.3. A plataforma MoraJunto será informada do novo valor para atualização do sistema de cobrança.');
+            doc.moveDown(1);
+
+            // ===== ENCARGOS =====
+            section(doc, 'CLÁUSULA 9ª — DOS ENCARGOS (IPTU, CONDOMÍNIO E CONSUMO)');
+            doc.fontSize(10).font('Helvetica');
+            doc.text('9.1. O IPTU do imóvel é de responsabilidade do LOCADOR, salvo acordo expresso em contrário.');
+            doc.moveDown(0.3);
+            doc.text('9.2. As despesas ordinárias de condomínio (manutenção, limpeza, portaria) são de responsabilidade do(s) LOCATÁRIO(S). Despesas extraordinárias (obras estruturais, fundo de reserva) são do LOCADOR.');
+            doc.moveDown(0.3);
+            doc.text('9.3. Despesas de consumo individual (água, luz, gás, internet) são de responsabilidade do(s) LOCATÁRIO(S), divididas igualmente em caso de moradia compartilhada.');
+            doc.moveDown(1);
+
+            // ===== DANOS =====
+            section(doc, 'CLÁUSULA 10ª — DOS DANOS AO IMÓVEL');
+            doc.fontSize(10).font('Helvetica');
+            doc.text('10.1. O(s) LOCATÁRIO(S) é(são) responsável(is) por quaisquer danos causados ao imóvel, seus acessórios e instalações, salvo desgaste natural pelo uso.');
+            doc.moveDown(0.3);
+            doc.text('10.2. Reparos necessários decorrentes de mau uso serão custeados pelo(s) LOCATÁRIO(S) em até 15 dias após a constatação, sob pena de desconto na caução.');
+            doc.moveDown(0.3);
+            doc.text('10.3. Danos causados por caso fortuito ou força maior não são de responsabilidade do(s) LOCATÁRIO(S).');
+            doc.moveDown(1);
+
+            // ===== SEGURO =====
+            section(doc, 'CLÁUSULA 11ª — DO SEGURO');
+            doc.fontSize(10).font('Helvetica');
+            doc.text('11.1. O LOCADOR é responsável pela contratação e manutenção de seguro contra incêndio do imóvel, conforme Art. 22 da Lei 8.245/91.');
+            doc.moveDown(0.3);
+            doc.text('11.2. O(s) LOCATÁRIO(S) poderá(ão), facultativamente, contratar seguro de conteúdo (bens pessoais), sendo este de sua exclusiva responsabilidade.');
+            doc.moveDown(1);
+
+            // ===== INADIMPLÊNCIA =====
+            section(doc, 'CLÁUSULA 12ª — DA INADIMPLÊNCIA E DESPEJO');
+            doc.fontSize(10).font('Helvetica');
+            doc.text('12.1. O atraso superior a 30 (trinta) dias no pagamento do aluguel e encargos autoriza o LOCADOR a ingressar com ação de despejo, nos termos da Lei 8.245/91.');
+            doc.moveDown(0.3);
+            doc.text('12.2. A plataforma MoraJunto notificará o(s) LOCATÁRIO(S) sobre pagamentos em atraso, sem que isso constitua obrigação de cobrança ou responsabilidade pela inadimplência.');
+            doc.moveDown(0.3);
+            doc.text('12.3. Em caso de moradia compartilhada, a inadimplência de um locatário não exime os demais da responsabilidade solidária pelo valor total.');
+            doc.moveDown(1);
+
             // ===== NOVA PÁGINA =====
             doc.addPage();
 
             // ===== MORADIA COMPARTILHADA =====
             if (tenants.length > 1) {
-                section(doc, 'CLÁUSULA 7ª — DA MORADIA COMPARTILHADA');
+                section(doc, 'CLÁUSULA 13ª — DA MORADIA COMPARTILHADA');
                 doc.fontSize(10).font('Helvetica');
                 var compartilhada = [
                     'Todos os locatários são solidariamente responsáveis pelo pagamento integral do aluguel;',
@@ -153,7 +211,7 @@ function generateContract(data) {
             }
 
             // ===== PLATAFORMA =====
-            var clausNum = tenants.length > 1 ? 8 : 7;
+            var clausNum = tenants.length > 1 ? 14 : 13;
             section(doc, 'CLÁUSULA ' + clausNum + 'ª — DA PLATAFORMA MORAJUNTO');
             doc.fontSize(10).font('Helvetica');
             var plataforma = [
@@ -180,11 +238,61 @@ function generateContract(data) {
             doc.text(clausNum + '.3. A rescisão por justa causa (descumprimento contratual) não gera obrigação de multa para a parte prejudicada.');
             doc.moveDown(1);
 
-            // ===== VISTORIA =====
+            // ===== RESCISÃO PELO LOCADOR =====
             clausNum++;
-            section(doc, 'CLÁUSULA ' + clausNum + 'ª — DA VISTORIA');
+            section(doc, 'CLÁUSULA ' + clausNum + 'ª — DA RESCISÃO PELO LOCADOR');
             doc.fontSize(10).font('Helvetica');
-            doc.text('Será realizada vistoria do imóvel no início e no término da locação, documentada por fotos e relatório descritivo. O locatário deverá devolver o imóvel no mesmo estado da vistoria inicial, salvo desgaste natural pelo uso.');
+            doc.text(clausNum + '.1. O LOCADOR poderá rescindir o contrato nas hipóteses previstas na Lei 8.245/91, notificando o(s) LOCATÁRIO(S) com antecedência mínima de 30 (trinta) dias.');
+            doc.moveDown(0.3);
+            doc.text(clausNum + '.2. Em caso de venda do imóvel, o(s) LOCATÁRIO(S) terá(ão) direito de preferência na compra e prazo de 90 dias para desocupação, salvo cláusula de vigência averbada na matrícula.');
+            doc.moveDown(1);
+
+            // ===== VISTORIA E ENTREGA =====
+            clausNum++;
+            section(doc, 'CLÁUSULA ' + clausNum + 'ª — DA VISTORIA E ENTREGA DE CHAVES');
+            doc.fontSize(10).font('Helvetica');
+            doc.text(clausNum + '.1. Será realizada vistoria do imóvel no início e no término da locação, documentada por fotos e relatório descritivo, assinado por ambas as partes.');
+            doc.moveDown(0.3);
+            doc.text(clausNum + '.2. O laudo de vistoria inicial será anexado a este contrato e ficará disponível na plataforma MoraJunto.');
+            doc.moveDown(0.3);
+            doc.text(clausNum + '.3. A entrega e devolução de chaves serão formalizadas por termo próprio, com data e hora, valendo como marco de início e término da posse.');
+            doc.moveDown(0.3);
+            doc.text(clausNum + '.4. O(s) LOCATÁRIO(S) deverá(ão) devolver o imóvel no mesmo estado da vistoria inicial, salvo desgaste natural pelo uso.');
+            doc.moveDown(1);
+
+            // ===== ACEITE DIGITAL =====
+            clausNum++;
+            section(doc, 'CLÁUSULA ' + clausNum + 'ª — DO ACEITE DIGITAL');
+            doc.fontSize(10).font('Helvetica');
+            doc.text(clausNum + '.1. As partes reconhecem a validade jurídica do aceite digital realizado na plataforma MoraJunto, conforme a Medida Provisória 2.200-2/2001 (infraestrutura de chaves públicas) e o Marco Civil da Internet (Lei 12.965/2014).');
+            doc.moveDown(0.3);
+            doc.text(clausNum + '.2. O aceite digital registra: identificação do usuário (nome, CPF, e-mail), data e hora (timestamp), e endereço IP, constituindo prova de manifestação de vontade.');
+            doc.moveDown(0.3);
+            doc.text(clausNum + '.3. As partes podem, facultativamente, imprimir e assinar fisicamente este documento para fins de registro em cartório.');
+            doc.moveDown(1);
+
+            // ===== LGPD =====
+            clausNum++;
+            section(doc, 'CLÁUSULA ' + clausNum + 'ª — DA PROTEÇÃO DE DADOS (LGPD)');
+            doc.fontSize(10).font('Helvetica');
+            doc.text(clausNum + '.1. As partes autorizam o tratamento de seus dados pessoais (nome, CPF, e-mail, telefone) pela plataforma MoraJunto para a finalidade exclusiva de execução deste contrato, conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018).');
+            doc.moveDown(0.3);
+            doc.text(clausNum + '.2. Os dados serão mantidos durante a vigência do contrato e por 5 (cinco) anos após seu término, para cumprimento de obrigações legais.');
+            doc.moveDown(0.3);
+            doc.text(clausNum + '.3. Qualquer parte pode solicitar a exclusão de seus dados após o término contratual, respeitadas as obrigações legais de retenção.');
+            doc.moveDown(1);
+
+            // ===== DISPOSIÇÕES GERAIS =====
+            clausNum++;
+            section(doc, 'CLÁUSULA ' + clausNum + 'ª — DAS DISPOSIÇÕES GERAIS');
+            doc.fontSize(10).font('Helvetica');
+            doc.text(clausNum + '.1. Este contrato é regido pela Lei 8.245/91 (Lei do Inquilinato) e subsidiariamente pelo Código Civil Brasileiro.');
+            doc.moveDown(0.3);
+            doc.text(clausNum + '.2. Eventuais alterações a este contrato somente terão validade mediante aditivo por escrito, aceito por todas as partes.');
+            doc.moveDown(0.3);
+            doc.text(clausNum + '.3. A tolerância de qualquer das partes quanto ao descumprimento de cláusula contratual não constituirá renúncia ao direito de exigi-la posteriormente.');
+            doc.moveDown(0.3);
+            doc.text(clausNum + '.4. Se qualquer cláusula deste contrato for considerada nula ou inexequível, as demais permanecerão em pleno vigor.');
             doc.moveDown(1);
 
             // ===== FORO =====
