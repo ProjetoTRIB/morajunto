@@ -472,12 +472,15 @@ router.put('/users/:id/suspend', validateId('id'), async (req, res) => {
 
 // POST /api/admin/cleanup-seed-data — remove dados seed/beta
 // Body: { execute: true } para apagar; sem execute = dry-run.
-// Preserva: role=admin e ADMIN_EMAIL do env.
-// Critério seed: email matches @teste.com / ^test@ / ^fake@ / ^seed@ / ^mock@ / ^example@
+// Body: { wipeAllProperties: true } também apaga TODOS os imóveis e seus dados relacionados
+//   (rentals, paymentTransactions). Use para clean-slate de lançamento.
+// Preserva: role=admin e ADMIN_EMAIL do env. Nunca apaga usuários reais.
+// Critério seed user: email matches @teste.com / ^test@ / ^fake@ / ^seed@ / ^mock@ / ^example@
 const Notification = require('../models/Notification');
 router.post('/cleanup-seed-data', async (req, res) => {
     try {
         var execute = req.body && req.body.execute === true;
+        var wipeAllProperties = req.body && req.body.wipeAllProperties === true;
         var adminEmail = (process.env.ADMIN_EMAIL || 'thalis132008@gmail.com').toLowerCase();
         var patterns = [/@teste\.com$/i, /^test[0-9_.-]*@/i, /^fake[0-9_.-]*@/i, /^seed[0-9_.-]*@/i, /^mock[0-9_.-]*@/i, /^example[0-9_.-]*@/i];
         function isSeedEmail(email) {
@@ -517,6 +520,15 @@ router.post('/cleanup-seed-data', async (req, res) => {
         });
         var notifCount = await Notification.countDocuments({ user: { $in: seedUserIds } });
 
+        // Contagens extras se wipeAllProperties
+        var totalProps = 0, totalRentals = 0, totalTxs = 0, totalRepublicas = 0;
+        if (wipeAllProperties) {
+            totalProps = await Property.countDocuments({});
+            totalRentals = await Rental.countDocuments({});
+            totalTxs = await PaymentTransaction.countDocuments({});
+            totalRepublicas = await Republica.countDocuments({});
+        }
+
         var summary = {
             users: seedUsers.length,
             properties: seedProperties.length,
@@ -527,17 +539,45 @@ router.post('/cleanup-seed-data', async (req, res) => {
             sampleProperties: seedProperties.slice(0, 5).map(function(p) { return p.title; })
         };
 
-        if (!execute) {
-            return res.json({ mode: 'dry-run', summary: summary, message: 'Nada foi apagado. Envie { execute: true } para apagar.' });
+        if (wipeAllProperties) {
+            summary.wipeAllProperties = {
+                properties: totalProps,
+                rentals: totalRentals,
+                paymentTransactions: totalTxs,
+                republicas: totalRepublicas
+            };
         }
 
-        var deleted = { users: 0, properties: 0, rentals: 0, paymentTransactions: 0, notifications: 0 };
+        if (!execute) {
+            var msg = 'Nada foi apagado. Envie { execute: true } para apagar.';
+            if (wipeAllProperties) msg += ' ⚠️ wipeAllProperties vai apagar TODOS os imóveis + rentals + paymentTransactions + republicas.';
+            return res.json({ mode: 'dry-run', summary: summary, message: msg });
+        }
 
+        var deleted = { users: 0, properties: 0, rentals: 0, paymentTransactions: 0, notifications: 0, republicas: 0 };
+
+        // WIPE ALL PROPERTIES (se solicitado) — vai antes do cleanup de seeds pra não sobrar órfãos
+        if (wipeAllProperties) {
+            var rAllTx = await PaymentTransaction.deleteMany({});
+            deleted.paymentTransactions += rAllTx.deletedCount;
+
+            var rAllRent = await Rental.deleteMany({});
+            deleted.rentals += rAllRent.deletedCount;
+
+            var rAllProp = await Property.deleteMany({});
+            deleted.properties += rAllProp.deletedCount;
+
+            var rAllRep = await Republica.deleteMany({});
+            deleted.republicas = rAllRep.deletedCount;
+        }
+
+        // CLEANUP SEED USERS (sempre, independente de wipeAllProperties)
         if (notifCount > 0) {
             var rN = await Notification.deleteMany({ user: { $in: seedUserIds } });
             deleted.notifications = rN.deletedCount;
         }
-        if (txCount > 0) {
+        // Se já fizemos wipeAll, as txs/rentals/properties de seed já foram; senão, limpa só as deles
+        if (!wipeAllProperties && txCount > 0) {
             var rT = await PaymentTransaction.deleteMany({
                 $or: [
                     { tenant: { $in: seedUserIds } },
@@ -545,15 +585,15 @@ router.post('/cleanup-seed-data', async (req, res) => {
                     { rental: { $in: seedRentalIds } }
                 ]
             });
-            deleted.paymentTransactions = rT.deletedCount;
+            deleted.paymentTransactions += rT.deletedCount;
         }
-        if (seedRentalIds.length > 0) {
+        if (!wipeAllProperties && seedRentalIds.length > 0) {
             var rR = await Rental.deleteMany({ _id: { $in: seedRentalIds } });
-            deleted.rentals = rR.deletedCount;
+            deleted.rentals += rR.deletedCount;
         }
-        if (seedPropertyIds.length > 0) {
+        if (!wipeAllProperties && seedPropertyIds.length > 0) {
             var rP = await Property.deleteMany({ _id: { $in: seedPropertyIds } });
-            deleted.properties = rP.deletedCount;
+            deleted.properties += rP.deletedCount;
         }
         if (seedUserIds.length > 0) {
             var rU = await User.deleteMany({ _id: { $in: seedUserIds } });
