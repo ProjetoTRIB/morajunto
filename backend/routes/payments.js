@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const https = require('https');
+const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const User = require('../models/User');
 const Rental = require('../models/Rental');
 const PaymentTransaction = require('../models/PaymentTransaction');
@@ -15,8 +17,18 @@ const Notification = require('../models/Notification');
 const emailService = require('../services/emailService');
 const asaas = require('../services/asaasService');
 const { generateContract } = require('../services/contractService');
+const { autoTransferToOwners } = require('../services/paymentCron');
 const MP_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN || '';
-const FEE_PERCENT = 8;
+const FEE_PERCENT = parseInt(process.env.FEE_PERCENT, 10) || 8;
+
+// Rate limiter para endpoints de contrato (evitar abuso de geração de PDF)
+const contractLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 15,
+    message: { error: 'Muitas requisições de contrato. Tente novamente em 15 minutos.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
 
 // ===== HELPER: Create PIX payment via Mercado Pago =====
 function createMPPixPayment(amount, description, payerEmail, payerName, externalRef) {
@@ -88,6 +100,101 @@ function checkMPPayment(paymentId) {
     });
 }
 
+// ===== HELPER: Checar se todos pagaram e fazer repasse imediato =====
+async function checkAndTransferToOwner(rentalId, month) {
+    if (!rentalId || !month) return;
+
+    var txs = await PaymentTransaction.find({ rental: rentalId, month: month });
+    if (txs.length === 0) return;
+
+    // Todos pagaram?
+    var allPaid = txs.every(function(tx) { return tx.status === 'paid'; });
+    if (!allPaid) return;
+
+    // Já transferido?
+    var alreadyTransferred = txs.some(function(tx) { return tx.ownerTransferStatus === 'transferred'; });
+    if (alreadyTransferred) return;
+
+    var ownerTotal = txs.reduce(function(sum, tx) { return sum + tx.ownerReceives; }, 0);
+    if (ownerTotal <= 0) return;
+
+    var owner = await User.findById(txs[0].owner);
+    if (!owner || !owner.pixKey) {
+        console.log('[AUTO-TRANSFER] Owner sem chave PIX — repasse pendente para cron');
+        return;
+    }
+
+    if (!asaas.isConfigured()) return;
+
+    var transfer = await asaas.createTransfer(
+        ownerTotal,
+        owner.pixKey,
+        owner.pixKeyType || 'aleatoria',
+        'Repasse aluguel ' + month
+    );
+
+    for (var tx of txs) {
+        tx.ownerTransferStatus = 'transferred';
+        tx.ownerTransferId = transfer.id || '';
+        tx.ownerTransferredAt = new Date();
+        await tx.save();
+    }
+
+    // Notificar
+    await Notification.create({
+        user: owner._id, type: 'owner_transfer',
+        title: 'Repasse realizado!',
+        message: 'Todos pagaram! R$' + ownerTotal.toFixed(2) + ' transferido via PIX ref. ' + month,
+        metadata: { rentalId: rentalId, month: month, amount: ownerTotal }
+    });
+    emailService.sendOwnerTransferEmail(owner.email, owner.name, ownerTotal, month);
+    console.log('[AUTO-TRANSFER] R$' + ownerTotal.toFixed(2) + ' repassado para ' + owner.name + ' (' + month + ')');
+}
+
+// ===== HELPER: Auto-gerar PIX ao criar cobrança =====
+async function autoGeneratePixFromRoute(tx, tenant, dueDate, month, propertyObj) {
+    var description = 'MoraJunto - Aluguel ' + month;
+    var dueStr = dueDate ? new Date(dueDate).toISOString().split('T')[0] : new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0];
+    var propTitle = propertyObj && propertyObj.title ? propertyObj.title : 'seu imóvel';
+    var savedTx = await PaymentTransaction.findById(tx._id);
+    if (!savedTx) return;
+
+    var tenantUser = await User.findById(tenant._id);
+    if (!tenantUser) return;
+
+    if (asaas.isConfigured()) {
+        var customer;
+        if (tenantUser.asaasCustomerId) {
+            customer = { id: tenantUser.asaasCustomerId };
+        } else {
+            customer = await asaas.ensureCustomer(tenantUser.name, tenantUser.cpf || '', tenantUser.email);
+            tenantUser.asaasCustomerId = customer.id;
+            await tenantUser.save();
+        }
+        var charge = await asaas.createPixCharge(customer.id, savedTx.totalAmount, dueStr, description);
+        var qr = await asaas.getPixQrCode(charge.id);
+        savedTx.asaasPaymentId = charge.id;
+        savedTx.asaasStatus = charge.status;
+        savedTx.pixQrCode = qr.payload || '';
+        savedTx.pixQrCodeBase64 = qr.encodedImage || '';
+        await savedTx.save();
+
+        emailService.sendPixPaymentEmail(
+            tenantUser.email, tenantUser.name,
+            savedTx.totalAmount, month, propTitle,
+            savedTx.pixQrCode, savedTx.pixQrCodeBase64,
+            dueDate
+        );
+        return;
+    }
+
+    // Simulação
+    savedTx.mpStatus = 'simulation';
+    savedTx.pixQrCode = 'MORAJUNTO' + savedTx._id.toString().substring(0, 8).toUpperCase();
+    await savedTx.save();
+    emailService.sendPaymentReminderEmail(tenantUser.email, tenantUser.name, savedTx.totalAmount, dueDate, propTitle);
+}
+
 // ===== POST /api/payments/generate — Proprietário gera cobranças do mês =====
 router.post('/generate', authMiddleware, [
     body('rentalId').isMongoId().withMessage('ID de aluguel inválido'),
@@ -118,9 +225,15 @@ router.post('/generate', authMiddleware, [
         if (existing) return res.status(400).json({ error: 'Cobranças do mês ' + month + ' já foram geradas' });
 
         var owner = await User.findById(rental.owner);
-        var rentPerTenant = Math.round(rental.rentAmount / rental.tenants.length);
-        var feePerTenant = Math.round(rentPerTenant * FEE_PERCENT / 100);
-        var totalPerTenant = rentPerTenant + feePerTenant;
+
+        // Calcular split por inquilino (customizado ou igual)
+        var hasSplits = rental.tenantSplits && rental.tenantSplits.length > 0;
+        var splitMap = {};
+        if (hasSplits) {
+            rental.tenantSplits.forEach(function(s) {
+                splitMap[s.tenant.toString()] = s.percentage;
+            });
+        }
 
         // Calculate agent commission from platform fee
         var property = await Property.findById(rental.property._id || rental.property).select('agency');
@@ -141,7 +254,16 @@ router.post('/generate', authMiddleware, [
 
         // Build all transaction docs and insert atomically
         var txDocs = rental.tenants.map(function(tenant) {
-            var agentCommissionAmount = Math.round(feePerTenant * agentCommissionRate);
+            // Calcular valor deste inquilino: split customizado ou igual
+            var tenantId = tenant._id.toString();
+            var percentage = hasSplits && splitMap[tenantId]
+                ? splitMap[tenantId]
+                : (100 / rental.tenants.length);
+            var rentForTenant = Math.round(rental.rentAmount * percentage / 100);
+            var feeForTenant = Math.round(rentForTenant * FEE_PERCENT / 100);
+            var totalForTenant = rentForTenant + feeForTenant;
+            var agentCommissionAmount = Math.round(feeForTenant * agentCommissionRate);
+
             return {
                 rental: rental._id,
                 property: rental.property._id,
@@ -150,15 +272,16 @@ router.post('/generate', authMiddleware, [
                 tenantName: tenant.name,
                 ownerName: owner ? owner.name : 'Proprietário',
                 month: month,
-                rentAmount: rentPerTenant,
+                rentAmount: rentForTenant,
+                splitPercentage: percentage,
                 feePercent: FEE_PERCENT,
-                feeAmount: feePerTenant,
-                totalAmount: totalPerTenant,
-                ownerReceives: rentPerTenant,
+                feeAmount: feeForTenant,
+                totalAmount: totalForTenant,
+                ownerReceives: rentForTenant,
                 dueDate: dueDate,
                 agentId: agentId,
                 agentCommission: agentCommissionAmount,
-                platformNet: feePerTenant - agentCommissionAmount,
+                platformNet: feeForTenant - agentCommissionAmount,
                 status: 'pending'
             };
         });
@@ -173,17 +296,38 @@ router.post('/generate', authMiddleware, [
             throw dupErr;
         }
 
+        // Auto-gerar PIX para cada inquilino (em background, não bloqueia resposta)
+        (async function() {
+            for (var i = 0; i < rental.tenants.length; i++) {
+                var tenant = rental.tenants[i];
+                var savedTx = transactions[i];
+                try {
+                    await autoGeneratePixFromRoute(savedTx, tenant, dueDate, month, rental.property);
+                } catch (pixErr) {
+                    console.error('[GENERATE] Erro PIX para ' + tenant.name + ':', pixErr.message);
+                }
+            }
+        })();
+
+        var totalFees = txDocs.reduce(function(s, d) { return s + d.feeAmount; }, 0);
         res.json({
             message: 'Cobranças geradas para ' + month,
             transactions: transactions,
+            splitType: hasSplits ? 'customizado' : 'igual',
             summary: {
                 aluguelTotal: rental.rentAmount,
                 inquilinos: rental.tenants.length,
-                porInquilino: rentPerTenant,
-                taxaPorInquilino: feePerTenant,
-                totalPorInquilino: totalPerTenant,
-                moraJuntoRecebe: feePerTenant * rental.tenants.length,
-                proprietarioRecebe: rental.rentAmount
+                moraJuntoRecebe: totalFees,
+                proprietarioRecebe: rental.rentAmount,
+                detalhes: txDocs.map(function(d) {
+                    return {
+                        inquilino: d.tenantName,
+                        porcentagem: d.splitPercentage,
+                        aluguel: d.rentAmount,
+                        taxa: d.feeAmount,
+                        total: d.totalAmount
+                    };
+                })
             }
         });
     } catch (e) {
@@ -318,10 +462,11 @@ router.get('/:id/status', validateId('id'), authMiddleware, async (req, res) => 
                     await tx.save();
                     await creditAgentCommission(tx);
                     await updatePaymentScore(tx);
+                    try { await checkAndTransferToOwner(tx.rental, tx.month); } catch (e) {}
                 } else {
                     await tx.save();
                 }
-            } catch (e) { /* Asaas check failed */ }
+            } catch (e) { console.error('[STATUS] Asaas check failed:', e.message); }
         }
         // Fallback: check MP
         else if (tx.mpPaymentId && tx.mpStatus !== 'simulation' && MP_TOKEN && tx.status !== 'paid') {
@@ -334,8 +479,9 @@ router.get('/:id/status', validateId('id'), authMiddleware, async (req, res) => 
                     await tx.save();
                     await creditAgentCommission(tx);
                     await updatePaymentScore(tx);
+                    try { await checkAndTransferToOwner(tx.rental, tx.month); } catch (e) {}
                 }
-            } catch (e) { /* MP check failed */ }
+            } catch (e) { console.error('[STATUS] MP check failed:', e.message); }
         }
 
         res.json({
@@ -390,6 +536,10 @@ router.post('/:id/confirm', validateId('id'), authMiddleware, async (req, res) =
             });
         } catch (notifErr) { console.error('Notification error:', notifErr.message); }
 
+        // Checar se todos pagaram → repasse imediato
+        try { await checkAndTransferToOwner(tx.rental, tx.month); }
+        catch (transferErr) { console.error('Manual confirm auto-transfer error:', transferErr.message); }
+
         res.json({
             message: 'Pagamento confirmado manualmente!',
             summary: {
@@ -405,7 +555,7 @@ router.post('/:id/confirm', validateId('id'), authMiddleware, async (req, res) =
 });
 
 // ===== GET /api/payments/contract/:rentalId — Gerar contrato PDF =====
-router.get('/contract/:rentalId', validateId('rentalId'), authMiddleware, async (req, res) => {
+router.get('/contract/:rentalId', contractLimiter, validateId('rentalId'), authMiddleware, async (req, res) => {
     try {
         var rental = await Rental.findById(req.params.rentalId)
             .populate('property')
@@ -444,7 +594,7 @@ router.get('/contract/:rentalId', validateId('rentalId'), authMiddleware, async 
 });
 
 // ===== POST /api/payments/contract/:rentalId/accept — Aceite digital do contrato =====
-router.post('/contract/:rentalId/accept', validateId('rentalId'), authMiddleware, async (req, res) => {
+router.post('/contract/:rentalId/accept', contractLimiter, validateId('rentalId'), authMiddleware, async (req, res) => {
     try {
         var rental = await Rental.findById(req.params.rentalId);
         if (!rental) return res.status(404).json({ error: 'Aluguel não encontrado' });
@@ -471,6 +621,29 @@ router.post('/contract/:rentalId/accept', validateId('rentalId'), authMiddleware
         var totalParties = 1 + rental.tenants.length; // owner + tenants
         var allAccepted = rental.contractAcceptances.length >= totalParties;
 
+        // Se todos aceitaram, enviar email para todas as partes
+        if (allAccepted) {
+            try {
+                var fullRental = await Rental.findById(rental._id)
+                    .populate('owner', 'name email')
+                    .populate('tenants', 'name email')
+                    .populate('property', 'title');
+                if (fullRental) {
+                    var propTitle = fullRental.property ? fullRental.property.title : 'Imóvel';
+                    if (fullRental.owner.email) {
+                        emailService.sendAllPartiesAcceptedEmail(fullRental.owner.email, fullRental.owner.name, propTitle);
+                    }
+                    fullRental.tenants.forEach(function(t) {
+                        if (t.email) {
+                            emailService.sendAllPartiesAcceptedEmail(t.email, t.name, propTitle);
+                        }
+                    });
+                }
+            } catch (emailErr) {
+                console.error('Contract email notification error:', emailErr.message);
+            }
+        }
+
         res.json({
             message: 'Contrato aceito com sucesso',
             accepted: true,
@@ -485,7 +658,7 @@ router.post('/contract/:rentalId/accept', validateId('rentalId'), authMiddleware
 });
 
 // ===== GET /api/payments/contract/:rentalId/status — Status do aceite =====
-router.get('/contract/:rentalId/status', validateId('rentalId'), authMiddleware, async (req, res) => {
+router.get('/contract/:rentalId/status', contractLimiter, validateId('rentalId'), authMiddleware, async (req, res) => {
     try {
         var rental = await Rental.findById(req.params.rentalId)
             .populate('owner', 'name')
@@ -515,9 +688,53 @@ router.get('/contract/:rentalId/status', validateId('rentalId'), authMiddleware,
     }
 });
 
+// ===== POST /api/payments/contract/:rentalId/notify — Enviar contrato por email aos inquilinos =====
+router.post('/contract/:rentalId/notify', contractLimiter, validateId('rentalId'), authMiddleware, async (req, res) => {
+    try {
+        var rental = await Rental.findById(req.params.rentalId)
+            .populate('owner', 'name email')
+            .populate('tenants', 'name email')
+            .populate('property', 'title');
+        if (!rental) return res.status(404).json({ error: 'Aluguel não encontrado' });
+
+        // Only owner can notify
+        if (rental.owner._id.toString() !== req.user.userId) {
+            return res.status(403).json({ error: 'Apenas o proprietário pode enviar o contrato' });
+        }
+
+        var propTitle = rental.property ? rental.property.title : 'Imóvel';
+        var sent = 0;
+        for (var i = 0; i < rental.tenants.length; i++) {
+            var t = rental.tenants[i];
+            if (t.email) {
+                await emailService.sendContractReadyEmail(t.email, t.name, rental.owner.name, propTitle, rental.rentAmount);
+                sent++;
+            }
+        }
+
+        res.json({ message: 'Contrato enviado para ' + sent + ' inquilino(s)', sent: sent });
+    } catch (e) {
+        console.error('Contract notify error:', e.message);
+        res.status(500).json({ error: 'Erro ao notificar inquilinos' });
+    }
+});
+
 // ===== POST /api/payments/webhook/asaas — Webhook Asaas =====
 router.post('/webhook/asaas', express.json(), async (req, res) => {
     try {
+        // Verificar assinatura do webhook Asaas (HMAC-SHA256)
+        var asaasWebhookToken = process.env.ASAAS_WEBHOOK_TOKEN;
+        if (asaasWebhookToken) {
+            var asaasSignature = req.headers['asaas-access-token'];
+            if (!asaasSignature || asaasSignature !== asaasWebhookToken) {
+                console.error('[ASAAS] Webhook: token inválido ou ausente');
+                return res.sendStatus(401);
+            }
+        } else if (process.env.NODE_ENV === 'production') {
+            console.error('[ASAAS] Webhook: ASAAS_WEBHOOK_TOKEN não configurado em produção — rejeitando');
+            return res.sendStatus(500);
+        }
+
         var event = req.body;
         // Asaas envia: { event: "PAYMENT_RECEIVED", payment: { id, status, value, ... } }
         if (!event || !event.event || !event.payment) {
@@ -552,6 +769,10 @@ router.post('/webhook/asaas', express.json(), async (req, res) => {
                         emailService.sendPaymentConfirmedEmail(tenantUser.email, tenantUser.name, tx.totalAmount, 'Aluguel ref. ' + tx.month);
                     }
                 } catch (notifErr) { console.error('Asaas webhook notification error:', notifErr.message); }
+
+                // Checar se todos pagaram → repasse imediato ao proprietário
+                try { await checkAndTransferToOwner(tx.rental, tx.month); }
+                catch (transferErr) { console.error('[ASAAS] Auto-transfer error:', transferErr.message); }
             }
         }
 
@@ -563,7 +784,6 @@ router.post('/webhook/asaas', express.json(), async (req, res) => {
 });
 
 // ===== POST /api/payments/webhook — Mercado Pago webhook =====
-const crypto = require('crypto');
 
 router.post('/webhook', express.json(), async (req, res) => {
     try {
@@ -686,6 +906,10 @@ router.post('/webhook', express.json(), async (req, res) => {
                         }
                     } catch (emailErr) { console.error('Payment email error:', emailErr.message); }
                 } catch (notifErr) { console.error('Notification error:', notifErr.message); }
+
+                // Checar se todos pagaram → repasse imediato ao proprietário
+                try { await checkAndTransferToOwner(tx.rental, tx.month); }
+                catch (transferErr) { console.error('[MP] Auto-transfer error:', transferErr.message); }
             }
         }
         res.sendStatus(200);
@@ -888,6 +1112,113 @@ router.get('/:id/receipt', validateId('id'), authMiddleware, async (req, res) =>
         });
     } catch (e) {
         res.status(500).json({ error: 'Erro ao gerar recibo' });
+    }
+});
+
+// ===== PUT /api/payments/rental/:rentalId/splits — Configurar % de cada inquilino =====
+router.put('/rental/:rentalId/splits', validateId('rentalId'), authMiddleware, [
+    body('splits').isArray({ min: 1 }).withMessage('Splits deve ser um array'),
+    body('splits.*.tenant').isMongoId().withMessage('ID de inquilino inválido'),
+    body('splits.*.percentage').isFloat({ min: 1, max: 100 }).withMessage('Porcentagem deve ser entre 1 e 100')
+], async (req, res) => {
+    try {
+        var errors = validationResult(req);
+        if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+        var rental = await Rental.findById(req.params.rentalId)
+            .populate('tenants', 'name');
+        if (!rental) return res.status(404).json({ error: 'Aluguel não encontrado' });
+        if (rental.owner.toString() !== req.user.userId) {
+            return res.status(403).json({ error: 'Apenas o proprietário pode configurar splits' });
+        }
+
+        var splits = req.body.splits;
+
+        // Validar que todos os tenants do split existem no rental
+        var rentalTenantIds = rental.tenants.map(function(t) { return t._id.toString(); });
+        for (var s of splits) {
+            if (!rentalTenantIds.includes(s.tenant)) {
+                return res.status(400).json({ error: 'Inquilino ' + s.tenant + ' não faz parte deste aluguel' });
+            }
+        }
+
+        // Validar que soma = 100
+        var total = splits.reduce(function(sum, s) { return sum + Number(s.percentage); }, 0);
+        if (Math.abs(total - 100) > 0.01) {
+            return res.status(400).json({ error: 'A soma das porcentagens deve ser 100%. Atual: ' + total.toFixed(2) + '%' });
+        }
+
+        // Verificar que não há cobranças pendentes
+        var currentMonth = new Date().toISOString().substring(0, 7);
+        var pendingTx = await PaymentTransaction.findOne({
+            rental: rental._id, month: currentMonth, status: 'pending'
+        });
+        if (pendingTx) {
+            return res.status(400).json({ error: 'Não é possível alterar splits com cobranças pendentes no mês atual. Aguarde o pagamento ou cancele.' });
+        }
+
+        rental.tenantSplits = splits.map(function(s) {
+            return { tenant: s.tenant, percentage: Number(s.percentage) };
+        });
+        await rental.save();
+
+        // Retornar splits atualizados com nomes
+        var result = rental.tenantSplits.map(function(s) {
+            var tenantObj = rental.tenants.find(function(t) { return t._id.toString() === s.tenant.toString(); });
+            return {
+                tenant: s.tenant,
+                name: tenantObj ? tenantObj.name : 'Desconhecido',
+                percentage: s.percentage,
+                valorEstimado: Math.round(rental.rentAmount * s.percentage / 100)
+            };
+        });
+
+        res.json({
+            message: 'Splits atualizados com sucesso',
+            splits: result,
+            aluguelTotal: rental.rentAmount
+        });
+    } catch (e) {
+        if (e.message && e.message.includes('soma das porcentagens')) {
+            return res.status(400).json({ error: e.message });
+        }
+        res.status(500).json({ error: 'Erro ao configurar splits' });
+    }
+});
+
+// ===== GET /api/payments/rental/:rentalId/splits — Ver splits atuais =====
+router.get('/rental/:rentalId/splits', validateId('rentalId'), authMiddleware, async (req, res) => {
+    try {
+        var rental = await Rental.findById(req.params.rentalId)
+            .populate('tenants', 'name');
+        if (!rental) return res.status(404).json({ error: 'Aluguel não encontrado' });
+
+        var userId = req.user.userId;
+        var isOwner = rental.owner.toString() === userId;
+        var isTenant = rental.tenants.some(function(t) { return t._id.toString() === userId; });
+        if (!isOwner && !isTenant) return res.status(403).json({ error: 'Sem permissão' });
+
+        var hasSplits = rental.tenantSplits && rental.tenantSplits.length > 0;
+        var splits = rental.tenants.map(function(t) {
+            var split = hasSplits
+                ? rental.tenantSplits.find(function(s) { return s.tenant.toString() === t._id.toString(); })
+                : null;
+            var percentage = split ? split.percentage : (100 / rental.tenants.length);
+            return {
+                tenant: t._id,
+                name: t.name,
+                percentage: Math.round(percentage * 100) / 100,
+                valorEstimado: Math.round(rental.rentAmount * percentage / 100)
+            };
+        });
+
+        res.json({
+            splitType: hasSplits ? 'customizado' : 'igual',
+            aluguelTotal: rental.rentAmount,
+            splits: splits
+        });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao buscar splits' });
     }
 });
 

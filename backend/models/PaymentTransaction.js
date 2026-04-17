@@ -8,7 +8,8 @@ const paymentTransactionSchema = new mongoose.Schema({
     tenantName: String,
     ownerName: String,
     month: String, // "2026-04"
-    rentAmount: { type: Number }, // valor do aluguel
+    rentAmount: { type: Number }, // valor do aluguel (parte deste inquilino)
+    splitPercentage: { type: Number }, // % do aluguel total que este inquilino paga
     feePercent: { type: Number, default: 8 },
     feeAmount: { type: Number }, // taxa MoraJunto
     totalAmount: { type: Number }, // total que inquilino paga
@@ -23,6 +24,10 @@ const paymentTransactionSchema = new mongoose.Schema({
     confirmedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     dueDate: { type: Date },
     paidAt: { type: Date },
+    // Owner transfer tracking
+    ownerTransferStatus: { type: String, enum: ['pending', 'transferred', 'failed'], default: 'pending' },
+    ownerTransferId: { type: String }, // ID da transferência Asaas
+    ownerTransferredAt: { type: Date },
     // Commission tracking
     agentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     agentCommission: { type: Number, default: 0 },

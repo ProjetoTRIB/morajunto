@@ -260,6 +260,46 @@ function generateContract(data) {
             doc.text(clausNum + '.4. O(s) LOCATÁRIO(S) deverá(ão) devolver o imóvel no mesmo estado da vistoria inicial, salvo desgaste natural pelo uso.');
             doc.moveDown(1);
 
+            // ===== ANIMAIS DE ESTIMAÇÃO =====
+            clausNum++;
+            section(doc, 'CLÁUSULA ' + clausNum + 'ª — DOS ANIMAIS DE ESTIMAÇÃO');
+            doc.fontSize(10).font('Helvetica');
+            doc.text(clausNum + '.1. A presença de animais de estimação no imóvel somente será permitida mediante autorização expressa e por escrito do LOCADOR.');
+            doc.moveDown(0.3);
+            doc.text(clausNum + '.2. Havendo autorização, o(s) LOCATÁRIO(S) se compromete(m) a manter as vacinas em dia, zelar pela higiene e responder por quaisquer danos causados pelo animal ao imóvel ou a terceiros.');
+            doc.moveDown(0.3);
+            doc.text(clausNum + '.3. Em moradia compartilhada, a autorização requer o consentimento de todos os moradores.');
+            doc.moveDown(1);
+
+            // ===== BENFEITORIAS E REFORMAS =====
+            clausNum++;
+            section(doc, 'CLÁUSULA ' + clausNum + 'ª — DAS BENFEITORIAS');
+            doc.fontSize(10).font('Helvetica');
+            doc.text(clausNum + '.1. Benfeitorias necessárias (telhado, encanamento, estrutura) são de responsabilidade do LOCADOR e serão indenizáveis, mesmo sem autorização prévia.');
+            doc.moveDown(0.3);
+            doc.text(clausNum + '.2. Benfeitorias úteis (armários, box, grades) podem ser realizadas com autorização por escrito do LOCADOR e serão indenizáveis ao final da locação, salvo acordo contrário.');
+            doc.moveDown(0.3);
+            doc.text(clausNum + '.3. Benfeitorias voluptuárias (decoração, pintura diferenciada) são de responsabilidade do(s) LOCATÁRIO(S) e não serão indenizáveis, podendo ser retiradas desde que não causem dano ao imóvel.');
+            doc.moveDown(1);
+
+            // ===== REGRAS DE CONVIVÊNCIA =====
+            if (tenants.length > 1) {
+                clausNum++;
+                section(doc, 'CLÁUSULA ' + clausNum + 'ª — DAS REGRAS DE CONVIVÊNCIA');
+                doc.fontSize(10).font('Helvetica');
+                var convivencia = [
+                    'Respeitar o horário de silêncio entre 22h e 8h, conforme legislação municipal;',
+                    'Manter áreas comuns limpas e organizadas, em sistema de rodízio a ser definido entre os moradores;',
+                    'Comunicar aos demais moradores com antecedência mínima de 24 horas sobre eventos ou visitas prolongadas;',
+                    'Proibido o uso de substâncias ilícitas no imóvel;',
+                    'Despesas extras não previstas (faxina, manutenção emergencial) serão divididas igualmente entre os moradores, salvo acordo diferente.'
+                ];
+                convivencia.forEach(function(item) {
+                    doc.text('• ' + item, { indent: 10 });
+                });
+                doc.moveDown(1);
+            }
+
             // ===== ACEITE DIGITAL =====
             clausNum++;
             section(doc, 'CLÁUSULA ' + clausNum + 'ª — DO ACEITE DIGITAL');
