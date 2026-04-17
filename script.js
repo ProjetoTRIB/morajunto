@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     handleFacebookCallback();
     initExitIntentPopup();
     animateRefCounter();
+    initHeroParallax();
 });
 
 // ===== FACEBOOK OAUTH CALLBACK HANDLER =====
@@ -615,6 +616,24 @@ function animateCounter(id, target) {
         }
         el.textContent = current.toLocaleString('pt-BR');
     }, 30);
+}
+
+// Hero parallax effect on mousemove (desktop only)
+function initHeroParallax() {
+    var visual = document.querySelector('.hero-visual');
+    if (!visual || window.innerWidth < 768) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var ticking = false;
+    document.addEventListener('mousemove', function(e) {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function() {
+            var x = (e.clientX / window.innerWidth - 0.5) * 16;
+            var y = (e.clientY / window.innerHeight - 0.5) * 8;
+            visual.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+            ticking = false;
+        });
+    });
 }
 
 function animateStatsOnScroll() {
@@ -2265,9 +2284,19 @@ async function loadAdminRentals() {
             var tenantNames = (r.tenants || []).map(function(t) { return t.name; }).join(', ') || '-';
             var date = r.startDate ? new Date(r.startDate).toLocaleDateString('pt-BR') : '-';
             var statusClass = r.status === 'active' ? 'status-active' : 'status-pending';
-            return '<tr><td>' + escapeHtml(propTitle) + '</td><td>' + escapeHtml(ownerName) + '</td><td>' + escapeHtml(tenantNames) + '</td><td>' + formatPrice(r.rentAmount) + '</td><td>' + formatPrice(r.feeAmount) + '</td><td><span class="status-badge ' + statusClass + '">' + (r.status || 'active') + '</span></td><td>' + date + '</td></tr>';
-        }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Nenhum aluguel</td></tr>';
-    } catch { document.getElementById('adminRentalsTbody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Erro ao carregar</td></tr>'; }
+            var acceptances = r.contractAcceptances || [];
+            var totalParties = 1 + (r.tenants || []).length;
+            var acceptedCount = acceptances.length;
+            var contractBadge = acceptedCount >= totalParties
+                ? '<span class="status-badge status-active">Assinado (' + acceptedCount + '/' + totalParties + ')</span>'
+                : acceptedCount > 0
+                    ? '<span class="status-badge status-pending">' + acceptedCount + '/' + totalParties + ' aceites</span>'
+                    : '<span class="status-badge" style="background:rgba(239,68,68,.1);color:#dc2626">Pendente</span>';
+            var actions = '<button class="btn btn-sm" style="font-size:.72rem;padding:4px 10px" onclick="downloadContract(\'' + r._id + '\')">PDF</button> ' +
+                '<button class="btn btn-sm" style="font-size:.72rem;padding:4px 10px" onclick="adminViewContractDetail(\'' + r._id + '\')">Detalhes</button>';
+            return '<tr><td>' + escapeHtml(propTitle) + '</td><td>' + escapeHtml(ownerName) + '</td><td>' + escapeHtml(tenantNames) + '</td><td>' + formatPrice(r.rentAmount) + '</td><td>' + formatPrice(r.feeAmount) + '</td><td><span class="status-badge ' + statusClass + '">' + (r.status || 'active') + '</span></td><td>' + contractBadge + '</td><td>' + date + '</td><td>' + actions + '</td></tr>';
+        }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text-muted)">Nenhum aluguel</td></tr>';
+    } catch { document.getElementById('adminRentalsTbody').innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted)">Erro ao carregar</td></tr>'; }
 
     // Pagamentos
     try {
@@ -2281,6 +2310,43 @@ async function loadAdminRentals() {
             return '<tr><td>' + escapeHtml(p.tenantName || '-') + '</td><td>' + (p.month || '-') + '</td><td>' + formatPrice(p.totalAmount) + '</td><td>' + formatPrice(p.feeAmount) + '</td><td>' + formatPrice(p.ownerReceives) + '</td><td><span class="status-badge ' + statusClass + '">' + (p.status || 'pending') + '</span></td><td>' + (canConfirm ? '<button class="btn btn-sm" style="background:var(--green);color:#fff;font-size:.75rem" onclick="adminConfirmPayment(\'' + p._id + '\')">Confirmar</button>' : '-') + '</td></tr>';
         }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Nenhum pagamento</td></tr>';
     } catch { document.getElementById('adminPaymentsTbody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Erro ao carregar</td></tr>'; }
+}
+
+async function adminViewContractDetail(rentalId) {
+    try {
+        var res = await fetch(API + '/payments/contract/' + rentalId + '/status', { headers: { 'Authorization': 'Bearer ' + currentToken } });
+        if (!res.ok) { showToast('Erro ao carregar status', 'error'); return; }
+        var data = await res.json();
+        var parties = data.parties || [];
+        var total = parties.length;
+        var accepted = parties.filter(function(p) { return p.accepted; }).length;
+
+        var html = '<div style="padding:8px">' +
+            '<h3 style="margin:0 0 16px;font-size:1.1rem">Status do Contrato</h3>' +
+            '<div class="contract-progress" style="margin-bottom:16px"><div class="contract-progress-bar"><div class="contract-progress-fill" style="width:' + (total > 0 ? Math.round(accepted/total*100) : 0) + '%"></div></div><span class="contract-progress-text">' + accepted + '/' + total + ' assinaturas</span></div>' +
+            '<div class="contract-parties" style="margin-bottom:16px">' +
+            parties.map(function(p) {
+                var icon = p.accepted ? '<div class="contract-party-check done">&#10003;</div>' : '<div class="contract-party-check pending">&#8943;</div>';
+                var role = p.role === 'owner' ? 'Proprietário' : 'Inquilino';
+                var when = p.acceptedAt ? new Date(p.acceptedAt).toLocaleDateString('pt-BR') + ' ' + new Date(p.acceptedAt).toLocaleTimeString('pt-BR') : 'Pendente';
+                return '<div class="contract-party">' + icon + '<span><strong>' + escapeHtml(p.name) + '</strong> (' + role + ') — ' + when + '</span></div>';
+            }).join('') +
+            '</div>' +
+            '<div class="contract-actions">' +
+                '<button class="btn btn-accent btn-sm" onclick="downloadContract(\'' + rentalId + '\')">Baixar PDF</button>' +
+                '<button class="btn btn-outline btn-sm" onclick="closeCustomModal()">Fechar</button>' +
+            '</div></div>';
+
+        if (typeof showCustomModalHTML === 'function') {
+            showCustomModalHTML('Contrato', html);
+        } else {
+            // Fallback: use alert
+            var summary = parties.map(function(p) {
+                return p.name + ' (' + (p.role === 'owner' ? 'Proprietário' : 'Inquilino') + '): ' + (p.accepted ? 'Aceito' : 'Pendente');
+            }).join('\n');
+            alert('Status do Contrato\n\n' + summary + '\n\n' + accepted + '/' + total + ' assinaturas');
+        }
+    } catch(e) { showToast('Erro de conexão', 'error'); }
 }
 
 async function adminConfirmPayment(id) {
@@ -2980,7 +3046,29 @@ var RP_RENTAL_DATA = {
         jd_canada:            { name: 'Jardim Canada',        avg2q: 2200, min: 1000, max: 5200, tier: 'nobre',   unis: ['UNIP'] },
         jd_santa_angela:      { name: 'Jardim Santa Angela',  avg2q: 2100, min: 1000, max: 5000, tier: 'nobre',   unis: [] },
         city_ribeirao:        { name: 'City Ribeirao',        avg2q: 2300, min: 1060, max: 5500, tier: 'nobre',   unis: [] },
-        bonfim_paulista:      { name: 'Bonfim Paulista',      avg2q: 2500, min: 1200, max: 6000, tier: 'nobre',   unis: [] }
+        bonfim_paulista:      { name: 'Bonfim Paulista',      avg2q: 2500, min: 1200, max: 6000, tier: 'nobre',   unis: [] },
+        // Bairros adicionais - Populares
+        jd_presidente_dutra:  { name: 'Jd. Presidente Dutra',  avg2q: 1100, min: 550,  max: 2200, tier: 'popular', unis: [] },
+        jd_alexandre_balbo:   { name: 'Jd. Alexandre Balbo',   avg2q: 1150, min: 580,  max: 2400, tier: 'popular', unis: [] },
+        jd_interlagos:        { name: 'Jd. Interlagos',        avg2q: 1200, min: 600,  max: 2500, tier: 'popular', unis: [] },
+        jd_maria_luiza:       { name: 'Jd. Maria Luiza',       avg2q: 1100, min: 550,  max: 2200, tier: 'popular', unis: [] },
+        jd_joao_rossi:        { name: 'Jd. João Rossi',        avg2q: 1200, min: 600,  max: 2500, tier: 'popular', unis: [] },
+        vila_albertina:        { name: 'Vila Albertina',         avg2q: 1050, min: 520,  max: 2100, tier: 'popular', unis: [] },
+        jd_manoel_penna:      { name: 'Jd. Manoel Penna',      avg2q: 1100, min: 550,  max: 2300, tier: 'popular', unis: [] },
+        jd_salgado_filho:     { name: 'Jd. Salgado Filho',     avg2q: 1150, min: 575,  max: 2400, tier: 'popular', unis: [] },
+        vila_mariana:          { name: 'Vila Mariana',           avg2q: 1100, min: 550,  max: 2200, tier: 'popular', unis: [] },
+        jd_anhanguera:        { name: 'Jd. Anhanguera',         avg2q: 1150, min: 575,  max: 2400, tier: 'popular', unis: [] },
+        jd_centenario:        { name: 'Jd. Centenário',         avg2q: 1200, min: 600,  max: 2500, tier: 'popular', unis: [] },
+        vila_elisa:            { name: 'Vila Elisa',             avg2q: 1150, min: 575,  max: 2400, tier: 'popular', unis: [] },
+        jd_paulistano:         { name: 'Jd. Paulistano',         avg2q: 1250, min: 625,  max: 2600, tier: 'popular', unis: [] },
+        jd_das_palmeiras:      { name: 'Jd. das Palmeiras',      avg2q: 1200, min: 600,  max: 2500, tier: 'popular', unis: [] },
+        parque_dos_lagos:      { name: 'Parque dos Lagos',       avg2q: 1350, min: 675,  max: 3000, tier: 'medio',   unis: [] },
+        // Intermediarios extras
+        jd_roberto_benedetti:  { name: 'Jd. Roberto Benedetti',  avg2q: 1400, min: 700,  max: 3200, tier: 'medio',   unis: [] },
+        jd_marchesi:           { name: 'Jd. Marchesi',           avg2q: 1350, min: 680,  max: 3000, tier: 'medio',   unis: [] },
+        city_pereira:          { name: 'City Pereira',            avg2q: 1500, min: 750,  max: 3500, tier: 'medio',   unis: [] },
+        jd_helena:             { name: 'Jd. Helena',              avg2q: 1400, min: 700,  max: 3200, tier: 'medio',   unis: [] },
+        jd_florestan_fernandes:{ name: 'Jd. Florestan Fernandes', avg2q: 1300, min: 650,  max: 2800, tier: 'medio',   unis: [] }
     },
     // Multiplicador por quartos (baseado na média da cidade)
     bedroomMultiplier: { 1: 0.72, 2: 1.0, 3: 1.52, 4: 2.1 },
@@ -3043,7 +3131,6 @@ function calculateBudget() {
     }
 
     // Atualizar UI
-    document.getElementById('budgetMaxRent').textContent = 'R$ ' + estimatedRent.toLocaleString('pt-BR');
     document.getElementById('budgetPerPerson').textContent = 'R$ ' + rentPerPerson.toLocaleString('pt-BR') + ' por pessoa (' + bedrooms + ' quartos em ' + neighborhoodName + ')';
     document.getElementById('billRent').textContent = 'R$ ' + rentPerPerson.toLocaleString('pt-BR');
     document.getElementById('billWater').textContent = 'R$ ' + waterPP;
@@ -3051,7 +3138,31 @@ function calculateBudget() {
     document.getElementById('billInternet').textContent = 'R$ ' + internetPP;
     document.getElementById('billGas').textContent = 'R$ ' + gasPP;
     document.getElementById('billTotal').textContent = 'R$ ' + totalPP.toLocaleString('pt-BR');
-    document.getElementById('budgetResults').style.display = 'block';
+
+    // Animate results reveal
+    var resultsEl = document.getElementById('budgetResults');
+    resultsEl.classList.remove('budget-results--visible');
+    requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+            resultsEl.classList.add('budget-results--visible');
+        });
+    });
+
+    // CountUp animation for main rent value
+    var maxRentEl = document.getElementById('budgetMaxRent');
+    var startVal = 0;
+    var endVal = estimatedRent;
+    var duration = 600;
+    var startTime = null;
+    function animateCount(ts) {
+        if (!startTime) startTime = ts;
+        var progress = Math.min((ts - startTime) / duration, 1);
+        var eased = 1 - Math.pow(1 - progress, 3);
+        var current = Math.round(startVal + (endVal - startVal) * eased);
+        maxRentEl.textContent = 'R$ ' + current.toLocaleString('pt-BR');
+        if (progress < 1) requestAnimationFrame(animateCount);
+    }
+    requestAnimationFrame(animateCount);
 
     // Mostrar bairros que cabem no orçamento
     var hoodHtml = '<h4>Bairros que cabem no seu bolso (por pessoa)</h4><div class="budget-hood-list">';

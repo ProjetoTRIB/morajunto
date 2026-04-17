@@ -384,7 +384,9 @@ router.post('/resend-code', authMiddleware, async function(req, res) {
     }
 });
 
-// ===== INSTAGRAM HANDLE VERIFICATION =====
+// ===== INSTAGRAM VERIFICATION (2 etapas) =====
+
+// Etapa 1: Gerar código de verificação
 router.post('/verify-instagram', authMiddleware, async function(req, res) {
     try {
         var handle = (req.body.handle || '').replace('@', '').trim().substring(0, 30);
@@ -394,13 +396,147 @@ router.post('/verify-instagram', authMiddleware, async function(req, res) {
         var user = await User.findById(req.user.userId);
         if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
 
+        // Gerar código único
+        var code = 'MJ-' + crypto.randomBytes(3).toString('hex').toUpperCase().substring(0, 4);
+
         user.instagramHandle = handle;
         user.instagramUrl = 'https://instagram.com/' + handle;
+        user.instagramVerifyCode = code;
+        user.instagramVerifyExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 min
         await user.save();
 
-        res.json({ success: true, handle: handle });
+        res.json({
+            success: true,
+            handle: handle,
+            verifyCode: code,
+            message: 'Coloque o código "' + code + '" na sua bio do Instagram e clique em verificar.'
+        });
     } catch(e) {
         res.status(500).json({ error: 'Erro ao salvar Instagram' });
+    }
+});
+
+// Etapa 2: Confirmar que o código está na bio
+router.post('/verify-instagram/confirm', authMiddleware, async function(req, res) {
+    try {
+        var user = await User.findById(req.user.userId);
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+        if (!user.instagramHandle) return res.status(400).json({ error: 'Nenhum handle do Instagram informado' });
+        if (!user.instagramVerifyCode) return res.status(400).json({ error: 'Nenhum código de verificação pendente' });
+
+        // Verificar se expirou
+        if (user.instagramVerifyExpires && new Date() > user.instagramVerifyExpires) {
+            return res.status(400).json({ error: 'Código expirado. Gere um novo código.' });
+        }
+
+        // Tentar verificar via perfil público do Instagram
+        var verified = false;
+        try {
+            var profileData = await fetchInstagramProfile(user.instagramHandle);
+            if (profileData && profileData.includes(user.instagramVerifyCode)) {
+                verified = true;
+            }
+        } catch (scrapeErr) {
+            console.error('[INSTAGRAM] Scrape falhou:', scrapeErr.message);
+        }
+
+        if (verified) {
+            user.socialVerified = true;
+            user.instagramVerified = true;
+            user.instagramVerifyCode = '';
+            user.instagramVerifyExpires = undefined;
+            await user.save();
+            return res.json({ success: true, verified: true, message: 'Instagram verificado com sucesso! Você pode remover o código da bio.' });
+        }
+
+        // Fallback: aceitar verificação manual (marcar como handle salvo mas não 100% verificado)
+        // O usuário pode tentar de novo ou admin pode aprovar
+        res.json({
+            success: false,
+            verified: false,
+            message: 'Não encontramos o código na sua bio. Verifique se: 1) O código "' + user.instagramVerifyCode + '" está na bio, 2) Seu perfil é público. Tente novamente em alguns segundos.'
+        });
+    } catch(e) {
+        res.status(500).json({ error: 'Erro ao verificar Instagram' });
+    }
+});
+
+// Etapa alternativa: Pular verificação e só salvar o handle (sem badge verificado)
+router.post('/verify-instagram/skip', authMiddleware, async function(req, res) {
+    try {
+        var user = await User.findById(req.user.userId);
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+        if (!user.instagramHandle) return res.status(400).json({ error: 'Nenhum handle informado' });
+
+        // Salvar sem marcar como verificado
+        user.instagramVerifyCode = '';
+        user.instagramVerifyExpires = undefined;
+        await user.save();
+
+        res.json({ success: true, handle: user.instagramHandle, verified: false, message: 'Handle salvo. Para obter o selo verificado, faça a verificação com código.' });
+    } catch(e) {
+        res.status(500).json({ error: 'Erro' });
+    }
+});
+
+// Helper: Fetch Instagram profile page (public)
+function fetchInstagramProfile(handle) {
+    return new Promise(function(resolve, reject) {
+        var options = {
+            hostname: 'www.instagram.com',
+            path: '/' + encodeURIComponent(handle) + '/',
+            method: 'GET',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml',
+                'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8'
+            }
+        };
+        var req = https.request(options, function(res) {
+            // Follow redirects
+            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                return resolve(''); // Redirect = profile may not exist or is private
+            }
+            var data = '';
+            res.on('data', function(chunk) { data += chunk; });
+            res.on('end', function() { resolve(data); });
+        });
+        req.on('error', reject);
+        req.setTimeout(10000, function() { req.destroy(); reject(new Error('Timeout')); });
+        req.end();
+    });
+}
+
+// ===== FACEBOOK VERIFICATION (por URL — sem API) =====
+router.post('/verify-facebook', authMiddleware, async function(req, res) {
+    try {
+        var url = (req.body.url || '').trim().substring(0, 200);
+
+        // Validar URL do Facebook
+        var fbMatch = url.match(/(?:https?:\/\/)?(?:www\.)?(?:facebook\.com|fb\.com)\/([a-zA-Z0-9.]+)/);
+        if (!fbMatch || !fbMatch[1]) {
+            return res.status(400).json({ error: 'URL do Facebook inválida. Use o formato: https://facebook.com/seuperfil' });
+        }
+
+        var fbHandle = fbMatch[1];
+        // Não aceitar pages genéricas
+        var blocked = ['home.php', 'login', 'watch', 'marketplace', 'groups', 'events', 'pages'];
+        if (blocked.includes(fbHandle.toLowerCase())) {
+            return res.status(400).json({ error: 'Isso não é um perfil válido do Facebook' });
+        }
+
+        var user = await User.findById(req.user.userId);
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+        user.facebookHandle = fbHandle;
+        user.facebookUrl = 'https://facebook.com/' + fbHandle;
+        user.facebookLinkVerified = true;
+        user.socialVerified = true;
+        await user.save();
+
+        res.json({ success: true, handle: fbHandle, url: user.facebookUrl });
+    } catch(e) {
+        res.status(500).json({ error: 'Erro ao salvar Facebook' });
     }
 });
 
