@@ -19,16 +19,21 @@
     <meta property="og:description" content="Encontre o colega ideal para dividir aluguel, repúblicas e apartamentos em Ribeirão Preto. Match por compatibilidade.">
     <meta property="og:url" content="https://morajunto.com.br">
     <meta property="og:site_name" content="MoraJunto">
+    <meta property="og:image" content="https://morajunto.com.br/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="MoraJunto — Divida o aluguel com gente de confiança em Ribeirão Preto">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="MoraJunto — Divida o aluguel em Ribeirão Preto">
     <meta name="twitter:description" content="Encontre o colega ideal para dividir aluguel e repúblicas em Ribeirão Preto. Match por compatibilidade e perfis verificados.">
+    <meta name="twitter:image" content="https://morajunto.com.br/og-image.png">
+    <meta name="twitter:image:alt" content="MoraJunto — Divida o aluguel com gente de confiança em Ribeirão Preto">
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="theme-color" content="#0F0D1A">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="MoraJunto">
@@ -66,6 +71,9 @@
             "@type": "Organization",
             "name": "MoraJunto",
             "email": "contatomorajunto@gmail.com",
+            "sameAs": [
+                "https://www.instagram.com/morajunto"
+            ],
             "address": {
                 "@type": "PostalAddress",
                 "addressLocality": "Ribeirão Preto",
@@ -94,7 +102,7 @@
     <!-- ===== NAVBAR ===== -->
     <nav class="navbar" id="navbar">
         <div class="container nav-content">
-            <a href="#" class="logo" onclick="showPage('home')">
+            <a href="javascript:void(0)" class="logo" onclick="showPage('home')">
                 <svg class="logo-icon" width="36" height="36" viewBox="0 0 100 100" fill="none">
                     <path d="M25 62c0-12 10-22 22-22s22 10 22 22" stroke="rgba(67,56,202,.3)" stroke-width="4" fill="none" stroke-linecap="round"/>
                     <path d="M31 62c0-12 10-22 22-22s22 10 22 22" stroke="#4338CA" stroke-width="4" fill="none" stroke-linecap="round"/>
@@ -105,23 +113,23 @@
                 <span class="logo-text"><span class="logo-light">mora</span><strong class="logo-bold">junto</strong></span>
             </a>
             <div class="nav-links" id="navLinks">
-                <a href="#" onclick="showPage('roommate')" class="nav-highlight">Dividir Apto</a>
-                <a href="#" onclick="showPage('republicas')">Repúblicas</a>
-                <a href="#" onclick="showPage('search')">Imóveis</a>
-                <a href="#" onclick="showPage('guide')">Guia</a>
-                <a href="#" onclick="showPage('owners-landing')" class="nav-owner-link">Proprietários</a>
-                <a href="#" id="navReferral" onclick="showPage('referral')" class="hidden">Indicar Imovel</a>
-                <a href="#" id="navChat" onclick="showPage('chat')" class="hidden">Mensagens <span id="chatBadge" class="nav-badge hidden">0</span></a>
-                <a href="#" id="navOwner" onclick="showPage('owner')" class="hidden">Meus Imóveis</a>
-                <a href="#" id="navTenant" onclick="showPage('tenant')" class="hidden">Meu Aluguel</a>
-                <a href="#" id="navAgency" onclick="showPage('agency')" class="hidden">Painel</a>
-                <a href="#" id="navAdmin" onclick="showPage('admin')" class="hidden nav-admin-link">Admin</a>
-                <a href="#" id="navNotifications" class="hidden nav-notif-btn" onclick="toggleNotifDropdown(event)">
+                <a href="javascript:void(0)" onclick="showPage('roommate')" class="nav-highlight">Dividir Apto</a>
+                <a href="javascript:void(0)" onclick="showPage('republicas')">Repúblicas</a>
+                <a href="javascript:void(0)" onclick="showPage('search')">Imóveis</a>
+                <a href="javascript:void(0)" onclick="showPage('guide')">Guia</a>
+                <a href="javascript:void(0)" onclick="showPage('owners-landing')" class="nav-owner-link">Proprietários</a>
+                <a href="javascript:void(0)" id="navReferral" onclick="showPage('referral')" class="hidden">Indicar Imovel</a>
+                <a href="javascript:void(0)" id="navChat" onclick="showPage('chat')" class="hidden">Mensagens <span id="chatBadge" class="nav-badge hidden">0</span></a>
+                <a href="javascript:void(0)" id="navOwner" onclick="showPage('owner')" class="hidden">Meus Imóveis</a>
+                <a href="javascript:void(0)" id="navTenant" onclick="showPage('tenant')" class="hidden">Meu Aluguel</a>
+                <a href="javascript:void(0)" id="navAgency" onclick="showPage('agency')" class="hidden">Painel</a>
+                <a href="javascript:void(0)" id="navAdmin" onclick="showPage('admin')" class="hidden nav-admin-link">Admin</a>
+                <a href="javascript:void(0)" id="navNotifications" class="hidden nav-notif-btn" onclick="toggleNotifDropdown(event)">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
                     <span id="notifBadge" class="nav-badge hidden">0</span>
                 </a>
                 <div id="notifDropdown" class="notif-dropdown hidden">
-                    <div class="notif-dropdown-header"><strong>Notificações</strong><a href="#" onclick="markNotifsRead()">Marcar lidas</a></div>
+                    <div class="notif-dropdown-header"><strong>Notificações</strong><a href="javascript:void(0)" onclick="markNotifsRead()">Marcar lidas</a></div>
                     <div id="notifList" class="notif-list"><p class="notif-empty">Nenhuma notificação</p></div>
                 </div>
                 <button class="theme-toggle" id="themeToggle" onclick="toggleDarkMode()" title="Alternar tema">
@@ -129,35 +137,35 @@
                     <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
                 </button>
                 <div class="nav-user-wrap">
-                    <a href="#" id="navUser" class="btn btn-accent btn-sm" onclick="showLoginModal()">Entrar</a>
+                    <a href="javascript:void(0)" id="navUser" class="btn btn-accent btn-sm" onclick="showLoginModal()">Entrar</a>
                     <div class="nav-user-dropdown" id="navUserDropdown">
-                        <a href="#" onclick="event.preventDefault();showPage('tenant');closeUserDropdown()">
+                        <a href="javascript:void(0)" onclick="event.preventDefault();showPage('tenant');closeUserDropdown()">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                             Meu perfil
                         </a>
-                        <a href="#" id="dropdownAdmin" style="display:none" onclick="event.preventDefault();showPage('admin');closeUserDropdown()">
+                        <a href="javascript:void(0)" id="dropdownAdmin" style="display:none" onclick="event.preventDefault();showPage('admin');closeUserDropdown()">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                             Painel Admin
                         </a>
-                        <a href="#" id="dropdownOwner" style="display:none" onclick="event.preventDefault();showPage('owner');closeUserDropdown()">
+                        <a href="javascript:void(0)" id="dropdownOwner" style="display:none" onclick="event.preventDefault();showPage('owner');closeUserDropdown()">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                             Painel Proprietário
                         </a>
-                        <a href="#" id="dropdownAgency" style="display:none" onclick="event.preventDefault();showPage('agency');closeUserDropdown()">
+                        <a href="javascript:void(0)" id="dropdownAgency" style="display:none" onclick="event.preventDefault();showPage('agency');closeUserDropdown()">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1 4 3 6 3s6-2 6-3v-5"/></svg>
                             Painel Imobiliária
                         </a>
-                        <a href="#" onclick="event.preventDefault();closeUserDropdown();deleteMyAccount()">
+                        <a href="javascript:void(0)" onclick="event.preventDefault();closeUserDropdown();deleteMyAccount()">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                             Excluir minha conta
                         </a>
-                        <a href="#" onclick="event.preventDefault();logout();closeUserDropdown()">
+                        <a href="javascript:void(0)" onclick="event.preventDefault();logout();closeUserDropdown()">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                             Sair
                         </a>
                     </div>
                 </div>
-                <a href="#" id="navLogout" class="hidden" onclick="logout()">Sair</a>
+                <a href="javascript:void(0)" id="navLogout" class="hidden" onclick="logout()">Sair</a>
             </div>
             <button class="nav-mobile" id="navMobile" onclick="toggleMobileMenu()">
                 <span></span><span></span><span></span>
@@ -167,19 +175,19 @@
 
     <!-- ===== MOBILE MENU ===== -->
     <div class="mobile-menu" id="mobileMenu">
-        <a href="#" onclick="showPage('roommate');closeMobileMenu()">Dividir Apto</a>
-        <a href="#" onclick="showPage('republicas');closeMobileMenu()">Repúblicas</a>
-        <a href="#" onclick="showPage('search');closeMobileMenu()">Imóveis</a>
-        <a href="#" onclick="showPage('guide');closeMobileMenu()">Guia</a>
-        <a href="#" onclick="showPage('owners-landing');closeMobileMenu()" class="nav-owner-link-mobile">Proprietários</a>
-        <a href="#" onclick="showPage('home');closeMobileMenu()">Início</a>
-        <a href="#" id="navChatMobile" onclick="showPage('chat');closeMobileMenu()" class="hidden">Mensagens <span id="chatBadgeMobile" class="nav-badge hidden">0</span></a>
-        <a href="#" id="navOwnerMobile" onclick="showPage('owner');closeMobileMenu()" class="hidden">Meus Imóveis</a>
-        <a href="#" id="navTenantMobile" onclick="showPage('tenant');closeMobileMenu()" class="hidden">Meu Aluguel</a>
-        <a href="#" id="navAgencyMobile" onclick="showPage('agency');closeMobileMenu()" class="hidden">Painel</a>
-        <a href="#" id="navAdminMobile" onclick="showPage('admin');closeMobileMenu()" class="hidden">Admin</a>
-        <a href="#" id="navUserMobile" onclick="showLoginModal();closeMobileMenu()">Entrar / Cadastrar</a>
-        <a href="#" id="navLogoutMobile" class="hidden" onclick="logout();closeMobileMenu()">Sair</a>
+        <a href="javascript:void(0)" onclick="showPage('roommate');closeMobileMenu()">Dividir Apto</a>
+        <a href="javascript:void(0)" onclick="showPage('republicas');closeMobileMenu()">Repúblicas</a>
+        <a href="javascript:void(0)" onclick="showPage('search');closeMobileMenu()">Imóveis</a>
+        <a href="javascript:void(0)" onclick="showPage('guide');closeMobileMenu()">Guia</a>
+        <a href="javascript:void(0)" onclick="showPage('owners-landing');closeMobileMenu()" class="nav-owner-link-mobile">Proprietários</a>
+        <a href="javascript:void(0)" onclick="showPage('home');closeMobileMenu()">Início</a>
+        <a href="javascript:void(0)" id="navChatMobile" onclick="showPage('chat');closeMobileMenu()" class="hidden">Mensagens <span id="chatBadgeMobile" class="nav-badge hidden">0</span></a>
+        <a href="javascript:void(0)" id="navOwnerMobile" onclick="showPage('owner');closeMobileMenu()" class="hidden">Meus Imóveis</a>
+        <a href="javascript:void(0)" id="navTenantMobile" onclick="showPage('tenant');closeMobileMenu()" class="hidden">Meu Aluguel</a>
+        <a href="javascript:void(0)" id="navAgencyMobile" onclick="showPage('agency');closeMobileMenu()" class="hidden">Painel</a>
+        <a href="javascript:void(0)" id="navAdminMobile" onclick="showPage('admin');closeMobileMenu()" class="hidden">Admin</a>
+        <a href="javascript:void(0)" id="navUserMobile" onclick="showLoginModal();closeMobileMenu()">Entrar / Cadastrar</a>
+        <a href="javascript:void(0)" id="navLogoutMobile" class="hidden" onclick="logout();closeMobileMenu()">Sair</a>
     </div>
 
     <!-- ===== PAGE: HOME ===== -->
@@ -188,53 +196,90 @@
         <!-- Hero -->
         <section class="hero hero-bg hero-photo">
             <div class="hero-overlay"></div>
+            <div class="hero-grain"></div>
             <div class="container hero-inner">
-                <!-- Live social proof -->
-                <div class="hero-live-badge">
-                    <span class="hero-live-dot"></span>
-                    <span id="heroLiveCount">23 pessoas</span> buscando moradia agora em Ribeirão
+                <!-- Left column: content -->
+                <div class="hero-content">
+                    <div class="hero-live-badge" aria-label="Pessoas buscando moradia agora">
+                        <span class="hero-live-dot"></span>
+                        <span id="heroLiveCount">23 pessoas</span> buscando moradia agora em Ribeirão
+                    </div>
+
+                    <h1 class="hero-title">Aluguel caro demais?<br><span class="hero-title-accent">Divida e economize<br><span class="hero-shimmer-value">R$900/mês</span></span></h1>
+                    <p class="hero-subtitle">Match Inteligente com perfis verificados por CPF. Encontre roommates e repúblicas perto da sua faculdade.</p>
+
+                    <div class="hero-cta-row">
+                        <button class="btn btn-lg btn-hero-primary" onclick="showPage('roommate')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-left"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                            Encontrar roommate grátis
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-arrow"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>
+                        </button>
+                        <button class="btn btn-lg btn-hero-secondary" onclick="showPage('republicas')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-left"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                            Ver repúblicas
+                        </button>
+                    </div>
+
+                    <div class="hero-trust-row">
+                        <span class="hero-trust-pill">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            CPF verificado
+                        </span>
+                        <span class="hero-trust-pill">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            100% grátis
+                        </span>
+                        <span class="hero-trust-pill">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            Ribeirão Preto
+                        </span>
+                    </div>
+
+                    <div class="search-quick-tags">
+                        <span class="quick-tag" onclick="showPage('republicas')">USP</span>
+                        <span class="quick-tag" onclick="showPage('republicas')">UNAERP</span>
+                        <span class="quick-tag" onclick="showPage('republicas')">Barão de Mauá</span>
+                        <span class="quick-tag" onclick="showPage('republicas')">UNIFRAN</span>
+                        <span class="quick-tag" onclick="quickSearch('centro')">Centro</span>
+                        <span class="quick-tag" onclick="quickSearch('ribeirania')">Ribeirânia</span>
+                    </div>
                 </div>
 
-                <h1 class="hero-title">Aluguel caro demais?<br><span class="hero-title-accent">Divida e economize <span class="hero-shimmer-value">R$900/mês</span></span></h1>
-                <p class="hero-subtitle">Match Inteligente + CPF verificado + Repúblicas perto da sua faculdade</p>
+                <!-- Right column: visual mockup -->
+                <div class="hero-visual">
+                    <div class="hero-mockup-card hero-mc-1">
+                        <div class="hero-mc-header">
+                            <div class="hero-mc-avatar">M</div>
+                            <div class="hero-mc-info">
+                                <span class="hero-mc-name">Marina, 22</span>
+                                <span class="hero-mc-detail">USP · Medicina</span>
+                            </div>
+                        </div>
+                        <div class="hero-mc-tags">
+                            <span class="hero-mc-tag">Organizada</span>
+                            <span class="hero-mc-tag">Não fuma</span>
+                            <span class="hero-mc-tag">Estuda à noite</span>
+                        </div>
+                        <div class="hero-mc-budget">Orçamento: <strong>R$750/mês</strong></div>
+                    </div>
 
-                <!-- CTA buttons -->
-                <div class="hero-cta-row">
-                    <button class="btn btn-lg btn-hero-primary hero-btn-pulse" onclick="showPage('roommate')">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-left"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                        Encontrar roommate grátis
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-arrow"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>
-                    </button>
-                    <button class="btn btn-lg btn-hero-secondary" onclick="showPage('republicas')">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon-left"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                        Ver repúblicas
-                    </button>
-                </div>
+                    <div class="hero-mockup-card hero-mc-2">
+                        <div class="hero-mc-prop-img">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        </div>
+                        <span class="hero-mc-prop-title">Apto 2 quartos · Ribeirânia</span>
+                        <span class="hero-mc-prop-price">R$1.500/mês <small>÷ 2 = R$750</small></span>
+                        <div class="hero-mc-prop-amenities">
+                            <span>🛏 2 quartos</span>
+                            <span>🚿 1 banheiro</span>
+                            <span>📶 Wi-Fi</span>
+                        </div>
+                    </div>
 
-                <!-- Trust badges -->
-                <div class="hero-trust-row">
-                    <span class="hero-trust-pill">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                        CPF verificado
-                    </span>
-                    <span class="hero-trust-pill">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                        100% grátis
-                    </span>
-                    <span class="hero-trust-pill">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                        Ribeirão Preto
-                    </span>
-                </div>
-
-                <!-- University quick tags -->
-                <div class="search-quick-tags">
-                    <span class="quick-tag" onclick="showPage('republicas')">USP</span>
-                    <span class="quick-tag" onclick="showPage('republicas')">UNAERP</span>
-                    <span class="quick-tag" onclick="showPage('republicas')">Barão de Mauá</span>
-                    <span class="quick-tag" onclick="showPage('republicas')">UNIFRAN</span>
-                    <span class="quick-tag" onclick="quickSearch('centro')">Centro</span>
-                    <span class="quick-tag" onclick="quickSearch('ribeirania')">Ribeirânia</span>
+                    <div class="hero-mockup-badge">
+                        <span class="hero-badge-val">92%</span>
+                        <span class="hero-badge-label">match</span>
+                    </div>
                 </div>
             </div>
         </section>
@@ -242,25 +287,44 @@
         <!-- Stats Bar -->
         <div class="stats-bar-wrap">
             <div class="stats-bar">
-                <div class="stat-card stat-card-accent">
-                    <div class="stat-card-banner" style="background-image:url('https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=400&h=200&fit=crop&crop=faces')"></div>
-                    <span class="stat-val stat-val-accent" id="statPeople" data-countup="127">127</span>
-                    <span class="stat-label">pessoas buscando</span>
+                <div class="stat-item">
+                    <div class="stat-icon stat-icon-accent">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                    </div>
+                    <div class="stat-text">
+                        <span class="stat-val stat-val-accent" id="statPeople" data-countup="127">127</span>
+                        <span class="stat-label">pessoas buscando</span>
+                    </div>
                 </div>
-                <div class="stat-card stat-card-green">
-                    <div class="stat-card-banner" style="background-image:url('https://images.unsplash.com/photo-1554768804-50c1e2b50a6e?w=400&h=200&fit=crop&crop=faces')"></div>
-                    <span class="stat-val stat-val-green" data-countup="900" data-prefix="R$">R$900</span>
-                    <span class="stat-label">economia média/mês</span>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-icon stat-icon-green">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                    </div>
+                    <div class="stat-text">
+                        <span class="stat-val stat-val-green" data-countup="900" data-prefix="R$">R$900</span>
+                        <span class="stat-label">economia média/mês</span>
+                    </div>
                 </div>
-                <div class="stat-card stat-card-amber">
-                    <div class="stat-card-banner" style="background-image:url('https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=200&fit=crop')"></div>
-                    <span class="stat-val stat-val-amber" id="statProperties" data-countup="0">0</span>
-                    <span class="stat-label">imóveis disponíveis</span>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-icon stat-icon-amber">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    </div>
+                    <div class="stat-text">
+                        <span class="stat-val stat-val-amber" id="statProperties" data-countup="0">0</span>
+                        <span class="stat-label">imóveis disponíveis</span>
+                    </div>
                 </div>
-                <div class="stat-card stat-card-accent">
-                    <div class="stat-card-banner" style="background-image:url('https://images.unsplash.com/photo-1562774053-701939374585?w=400&h=200&fit=crop')"></div>
-                    <span class="stat-val stat-val-accent" data-countup="5">5</span>
-                    <span class="stat-label">universidades</span>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-icon stat-icon-accent">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                    </div>
+                    <div class="stat-text">
+                        <span class="stat-val stat-val-accent" data-countup="5">5</span>
+                        <span class="stat-label">universidades</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -306,7 +370,7 @@
                     <!-- Loaded dynamically -->
                 </div>
                 <div class="center section-cta-wrap">
-                    <a href="#" class="btn btn-outline" onclick="showPage('search')">Ver todos os imóveis
+                    <a href="javascript:void(0)" class="btn btn-outline" onclick="showPage('search')">Ver todos os imóveis
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>
                     </a>
                 </div>
@@ -462,7 +526,7 @@
                     </div>
                 </div>
                 <div class="center section-cta-wrap-sm">
-                    <a href="#" class="btn btn-outline" onclick="showPage('republicas')">Ver todas as repúblicas
+                    <a href="javascript:void(0)" class="btn btn-outline" onclick="showPage('republicas')">Ver todas as repúblicas
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>
                     </a>
                 </div>
@@ -713,38 +777,47 @@
             <div class="container">
                 <div class="footer-grid">
                     <div class="footer-brand">
-                        <a href="#" class="footer-logo" onclick="showPage('home')">
+                        <a href="javascript:void(0)" class="footer-logo" onclick="showPage('home')">
                             <span class="footer-logo-light">Mora</span><strong class="footer-logo-bold">Junto</strong>
                         </a>
                         <p class="footer-brand-desc">A plataforma de Ribeirão Preto para dividir aluguel com gente de confiança. Match por compatibilidade e repúblicas verificadas.</p>
+                        <div class="footer-socials">
+                            <a href="https://www.instagram.com/morajunto" target="_blank" rel="noopener noreferrer" class="footer-social" aria-label="Instagram">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/></svg>
+                            </a>
+                            <a href="mailto:contatomorajunto@gmail.com" class="footer-social" aria-label="Email">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,4 12,13 2,4"/></svg>
+                            </a>
+                        </div>
                     </div>
                     <div class="footer-col">
                         <h4 class="footer-col-title">Plataforma</h4>
-                        <a href="#" onclick="showPage('search')" class="footer-link">Buscar imóveis</a>
-                        <a href="#" onclick="showPage('roommate')" class="footer-link">Dividir Apto</a>
-                        <a href="#" onclick="showPage('republicas')" class="footer-link">Repúblicas</a>
-                        <a href="#" onclick="showPage('guide')" class="footer-link">Guia</a>
-                        <a href="#" onclick="showPage('owners-landing')" class="footer-link">Para proprietários</a>
+                        <a href="javascript:void(0)" onclick="showPage('search')" class="footer-link">Buscar imóveis</a>
+                        <a href="javascript:void(0)" onclick="showPage('roommate')" class="footer-link">Dividir Apto</a>
+                        <a href="javascript:void(0)" onclick="showPage('republicas')" class="footer-link">Repúblicas</a>
+                        <a href="javascript:void(0)" onclick="showPage('guide')" class="footer-link">Guia</a>
+                        <a href="javascript:void(0)" onclick="showPage('owners-landing')" class="footer-link">Para proprietários</a>
                     </div>
                     <div class="footer-col">
                         <h4 class="footer-col-title">Bairros populares</h4>
-                        <a href="#" onclick="event.preventDefault();document.getElementById('searchInput').value='Jd. Sumaré';showPage('home');document.getElementById('searchInput').dispatchEvent(new Event('input'))" class="footer-link">Jd. Sumaré</a>
-                        <a href="#" onclick="event.preventDefault();document.getElementById('searchInput').value='Ribeirânia';showPage('home');document.getElementById('searchInput').dispatchEvent(new Event('input'))" class="footer-link">Ribeirânia</a>
-                        <a href="#" onclick="event.preventDefault();document.getElementById('searchInput').value='Centro';showPage('home');document.getElementById('searchInput').dispatchEvent(new Event('input'))" class="footer-link">Centro</a>
-                        <a href="#" onclick="event.preventDefault();document.getElementById('searchInput').value='Lagoinha';showPage('home');document.getElementById('searchInput').dispatchEvent(new Event('input'))" class="footer-link">Lagoinha</a>
+                        <a href="javascript:void(0)" onclick="quickSearch('Jd. Sumaré')" class="footer-link">Jd. Sumaré</a>
+                        <a href="javascript:void(0)" onclick="quickSearch('Ribeirânia')" class="footer-link">Ribeirânia</a>
+                        <a href="javascript:void(0)" onclick="quickSearch('Centro')" class="footer-link">Centro</a>
+                        <a href="javascript:void(0)" onclick="quickSearch('Lagoinha')" class="footer-link">Lagoinha</a>
+                        <a href="javascript:void(0)" onclick="quickSearch('Campos Elíseos')" class="footer-link">Campos Elíseos</a>
                     </div>
                     <div class="footer-col">
                         <h4 class="footer-col-title">Contato</h4>
                         <a href="mailto:contatomorajunto@gmail.com" class="footer-link">contatomorajunto@gmail.com</a>
-                        <a href="#" class="footer-link">(16) 99999-0000</a>
-                        <a href="#" class="footer-link">Ribeirão Preto - SP</a>
+                        <a href="https://www.instagram.com/morajunto" target="_blank" rel="noopener noreferrer" class="footer-link">@morajunto</a>
+                        <a href="javascript:void(0)" class="footer-link">Ribeirão Preto - SP</a>
                     </div>
                 </div>
                 <div class="footer-bottom">
                     <p class="footer-copy">&copy; 2026 MoraJunto. Todos os direitos reservados.</p>
                     <div class="footer-legal">
-                        <a href="#" onclick="showPage('terms')" class="footer-legal-link">Termos de Uso</a>
-                        <a href="#" onclick="showPage('privacy')" class="footer-legal-link">Política de Privacidade</a>
+                        <a href="javascript:void(0)" onclick="showPage('terms')" class="footer-legal-link">Termos de Uso</a>
+                        <a href="javascript:void(0)" onclick="showPage('privacy')" class="footer-legal-link">Política de Privacidade</a>
                     </div>
                 </div>
             </div>
@@ -1649,7 +1722,7 @@
                     <h3 style="margin-bottom:16px;color:var(--text)">Aluguéis ativos</h3>
                     <div class="admin-table-wrap">
                         <table class="admin-table">
-                            <thead><tr><th>Imóvel</th><th>Proprietário</th><th>Inquilinos</th><th>Aluguel</th><th>Taxa 8%</th><th>Status</th><th>Início</th></tr></thead>
+                            <thead><tr><th>Imóvel</th><th>Proprietário</th><th>Inquilinos</th><th>Aluguel</th><th>Taxa 8%</th><th>Status</th><th>Contrato</th><th>Início</th><th>Ações</th></tr></thead>
                             <tbody id="adminRentalsTbody"></tbody>
                         </table>
                     </div>
@@ -1801,6 +1874,20 @@
                                         <option value="quintino_facci">Quintino Facci II</option>
                                         <option value="adelino_simioni">Adelino Simioni</option>
                                         <option value="avelino_palma">Avelino Alves Palma</option>
+                                        <option value="jd_presidente_dutra">Jd. Presidente Dutra</option>
+                                        <option value="jd_alexandre_balbo">Jd. Alexandre Balbo</option>
+                                        <option value="jd_interlagos">Jd. Interlagos</option>
+                                        <option value="jd_maria_luiza">Jd. Maria Luiza</option>
+                                        <option value="jd_joao_rossi">Jd. Joao Rossi</option>
+                                        <option value="vila_albertina">Vila Albertina</option>
+                                        <option value="jd_manoel_penna">Jd. Manoel Penna</option>
+                                        <option value="jd_salgado_filho">Jd. Salgado Filho</option>
+                                        <option value="vila_mariana">Vila Mariana</option>
+                                        <option value="jd_anhanguera">Jd. Anhanguera</option>
+                                        <option value="jd_centenario">Jd. Centenario</option>
+                                        <option value="vila_elisa">Vila Elisa</option>
+                                        <option value="jd_paulistano">Jd. Paulistano</option>
+                                        <option value="jd_das_palmeiras">Jd. das Palmeiras</option>
                                     </optgroup>
                                     <optgroup label="Intermediarios">
                                         <option value="ribeirania">Ribeir&acirc;nia</option>
@@ -1824,6 +1911,12 @@
                                         <option value="monte_alegre">Monte Alegre</option>
                                         <option value="jd_luiza">Jardim Luiza</option>
                                         <option value="jd_recreio">Jardim Recreio</option>
+                                        <option value="parque_dos_lagos">Parque dos Lagos</option>
+                                        <option value="jd_roberto_benedetti">Jd. Roberto Benedetti</option>
+                                        <option value="jd_marchesi">Jd. Marchesi</option>
+                                        <option value="city_pereira">City Pereira</option>
+                                        <option value="jd_helena">Jd. Helena</option>
+                                        <option value="jd_florestan_fernandes">Jd. Florestan Fernandes</option>
                                     </optgroup>
                                     <optgroup label="Nobres">
                                         <option value="jd_california">Jardim California</option>
@@ -1840,9 +1933,12 @@
                                 <svg class="budget-select-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
                             </div>
                         </div>
-                        <button class="btn btn-accent" onclick="calculateBudget()">Calcular</button>
+                        <button class="btn btn-accent budget-calc-btn" onclick="calculateBudget()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
+                            Calcular
+                        </button>
                     </div>
-                    <div class="budget-results" id="budgetResults" style="display:none">
+                    <div class="budget-results" id="budgetResults">
                         <div class="budget-main-result">
                             <div class="budget-max-label">Aluguel médio na região</div>
                             <div class="budget-max-value" id="budgetMaxRent">R$ 0</div>
@@ -1925,13 +2021,31 @@
                             <div class="form-field">
                                 <label>Renda mensal</label>
                                 <input type="hidden" id="rmSalary" value="">
-                                <div class="rm-income-options" id="rmIncomeOptions">
-                                    <button type="button" class="rm-income-btn" data-val="1500" onclick="selectIncome(this)">Até R$ 1.500</button>
-                                    <button type="button" class="rm-income-btn" data-val="2500" onclick="selectIncome(this)">R$ 1.500 — 2.500</button>
-                                    <button type="button" class="rm-income-btn" data-val="4000" onclick="selectIncome(this)">R$ 2.500 — 4.000</button>
-                                    <button type="button" class="rm-income-btn" data-val="6000" onclick="selectIncome(this)">R$ 4.000 — 6.000</button>
-                                    <button type="button" class="rm-income-btn" data-val="10000" onclick="selectIncome(this)">R$ 6.000 — 10.000</button>
-                                    <button type="button" class="rm-income-btn" data-val="15000" onclick="selectIncome(this)">Acima de R$ 10.000</button>
+                                <div class="rm-income-grid" id="rmIncomeOptions">
+                                    <div class="rm-income-card" data-val="1500" onclick="selectIncome(this)">
+                                        <span class="rm-income-radio"></span>
+                                        <span class="rm-income-label">Ate R$ 1.500</span>
+                                    </div>
+                                    <div class="rm-income-card" data-val="2500" onclick="selectIncome(this)">
+                                        <span class="rm-income-radio"></span>
+                                        <span class="rm-income-label">R$ 1.500 — 2.500</span>
+                                    </div>
+                                    <div class="rm-income-card" data-val="4000" onclick="selectIncome(this)">
+                                        <span class="rm-income-radio"></span>
+                                        <span class="rm-income-label">R$ 2.500 — 4.000</span>
+                                    </div>
+                                    <div class="rm-income-card" data-val="6000" onclick="selectIncome(this)">
+                                        <span class="rm-income-radio"></span>
+                                        <span class="rm-income-label">R$ 4.000 — 6.000</span>
+                                    </div>
+                                    <div class="rm-income-card" data-val="10000" onclick="selectIncome(this)">
+                                        <span class="rm-income-radio"></span>
+                                        <span class="rm-income-label">R$ 6.000 — 10.000</span>
+                                    </div>
+                                    <div class="rm-income-card" data-val="15000" onclick="selectIncome(this)">
+                                        <span class="rm-income-radio"></span>
+                                        <span class="rm-income-label">Acima de R$ 10.000</span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="form-row-2">
@@ -1949,28 +2063,38 @@
                             <div class="form-field">
                                 <label>Bairros de preferencia (selecione ate 3)</label>
                                 <input type="hidden" id="rmNeighborhoods" value="">
+                                <input type="text" class="rm-hood-search" id="rmHoodSearch" placeholder="Buscar bairro...">
                                 <div class="rm-hood-chips" id="rmHoodChips">
-                                    <div class="rm-hood-group"><span class="rm-hood-group-label">Central</span><div class="rm-hood-group-items">
+                                    <div class="rm-hood-group"><span class="rm-hood-group-label">Centro</span><div class="rm-hood-group-items">
                                         <span class="rm-hood-chip" data-v="Centro">Centro</span>
                                         <span class="rm-hood-chip" data-v="Vila Seixas">Vila Seixas</span>
                                         <span class="rm-hood-chip" data-v="Higienopolis">Higienopolis</span>
                                         <span class="rm-hood-chip" data-v="Republica">Republica</span>
+                                        <span class="rm-hood-chip" data-v="Vila Virginia">Vila Virginia</span>
                                     </div></div>
                                     <div class="rm-hood-group"><span class="rm-hood-group-label">Zona Sul</span><div class="rm-hood-group-items">
                                         <span class="rm-hood-chip" data-v="Jardim Sumare">Jd. Sumare</span>
                                         <span class="rm-hood-chip" data-v="Jardim Paulista">Jd. Paulista</span>
                                         <span class="rm-hood-chip" data-v="Jardim Iraja">Jd. Iraja</span>
+                                        <span class="rm-hood-chip" data-v="Jardim Macedo">Jd. Macedo</span>
+                                        <span class="rm-hood-chip" data-v="Jardim America">Jd. America</span>
+                                        <span class="rm-hood-chip" data-v="Jardim Independencia">Jd. Independencia</span>
                                         <span class="rm-hood-chip" data-v="Jardim Botanico">Jd. Botanico</span>
                                         <span class="rm-hood-chip" data-v="City Ribeirao">City Ribeirao</span>
                                         <span class="rm-hood-chip" data-v="Bonfim Paulista">Bonfim Paulista</span>
+                                        <span class="rm-hood-chip" data-v="Jardim Canada">Jd. Canada</span>
                                     </div></div>
                                     <div class="rm-hood-group"><span class="rm-hood-group-label">Zona Oeste</span><div class="rm-hood-group-items">
                                         <span class="rm-hood-chip" data-v="Nova Alianca">Nova Alianca</span>
                                         <span class="rm-hood-chip" data-v="Jd Nova Alianca Sul">Jd. N. Alianca Sul</span>
                                         <span class="rm-hood-chip" data-v="Alto da Boa Vista">Alto da Boa Vista</span>
                                         <span class="rm-hood-chip" data-v="Jardim California">Jd. California</span>
+                                        <span class="rm-hood-chip" data-v="Jardim Santa Angela">Jd. Santa Angela</span>
                                         <span class="rm-hood-chip" data-v="Lagoinha">Lagoinha</span>
                                         <span class="rm-hood-chip" data-v="Ipiranga">Ipiranga</span>
+                                        <span class="rm-hood-chip" data-v="Guapore">Guapore</span>
+                                        <span class="rm-hood-chip" data-v="Parque dos Lagos">Pq. dos Lagos</span>
+                                        <span class="rm-hood-chip" data-v="Jd. das Palmeiras">Jd. das Palmeiras</span>
                                     </div></div>
                                     <div class="rm-hood-group"><span class="rm-hood-group-label">Zona Norte</span><div class="rm-hood-group-items">
                                         <span class="rm-hood-chip" data-v="Campos Eliseos">Campos Eliseos</span>
@@ -1978,12 +2102,33 @@
                                         <span class="rm-hood-chip" data-v="Parque Industrial">Pq. Industrial</span>
                                         <span class="rm-hood-chip" data-v="Jardim Piratininga">Jd. Piratininga</span>
                                         <span class="rm-hood-chip" data-v="Simioni">Simioni</span>
+                                        <span class="rm-hood-chip" data-v="Jardim Antartica">Jd. Antartica</span>
+                                        <span class="rm-hood-chip" data-v="Jardim Paiva">Jd. Paiva</span>
+                                        <span class="rm-hood-chip" data-v="Vila Abranches">Vila Abranches</span>
+                                        <span class="rm-hood-chip" data-v="Quintino Facci II">Quintino Facci II</span>
+                                        <span class="rm-hood-chip" data-v="Adelino Simioni">Adelino Simioni</span>
+                                        <span class="rm-hood-chip" data-v="Avelino Alves Palma">Avelino A. Palma</span>
+                                        <span class="rm-hood-chip" data-v="Jd. Presidente Dutra">Jd. Pres. Dutra</span>
+                                        <span class="rm-hood-chip" data-v="Jd. Alexandre Balbo">Jd. Alex. Balbo</span>
+                                        <span class="rm-hood-chip" data-v="Jd. Maria Luiza">Jd. Maria Luiza</span>
+                                        <span class="rm-hood-chip" data-v="Vila Albertina">Vila Albertina</span>
+                                        <span class="rm-hood-chip" data-v="Jd. Manoel Penna">Jd. Manoel Penna</span>
+                                        <span class="rm-hood-chip" data-v="Jd. Salgado Filho">Jd. Salgado Filho</span>
+                                        <span class="rm-hood-chip" data-v="Jd. Anhanguera">Jd. Anhanguera</span>
+                                        <span class="rm-hood-chip" data-v="Jd. Centenario">Jd. Centenario</span>
                                     </div></div>
                                     <div class="rm-hood-group"><span class="rm-hood-group-label">Zona Leste</span><div class="rm-hood-group-items">
                                         <span class="rm-hood-chip" data-v="Ribeir&acirc;nia">Ribeir&acirc;nia</span>
                                         <span class="rm-hood-chip" data-v="Sumarezinho">Sumarezinho</span>
                                         <span class="rm-hood-chip" data-v="Monte Alegre">Monte Alegre</span>
                                         <span class="rm-hood-chip" data-v="Castelo Branco">Castelo Branco</span>
+                                        <span class="rm-hood-chip" data-v="Jardim Luiza">Jd. Luiza</span>
+                                        <span class="rm-hood-chip" data-v="Jardim Recreio">Jd. Recreio</span>
+                                        <span class="rm-hood-chip" data-v="Jd. Interlagos">Jd. Interlagos</span>
+                                        <span class="rm-hood-chip" data-v="Jd. Joao Rossi">Jd. Joao Rossi</span>
+                                        <span class="rm-hood-chip" data-v="Vila Elisa">Vila Elisa</span>
+                                        <span class="rm-hood-chip" data-v="Jd. Paulistano">Jd. Paulistano</span>
+                                        <span class="rm-hood-chip" data-v="Vila Mariana">Vila Mariana</span>
                                     </div></div>
                                 </div>
                             </div>
@@ -2084,7 +2229,7 @@
                         <!-- Verificação -->
                         <div class="rm-form-section">
                             <h3>Verificação social <span class="rm-verify-required">(obrigatório)</span></h3>
-                            <p class="rm-verify-desc">Perfis verificados recebem 3x mais conexões. Verificação real via Facebook Login.</p>
+                            <p class="rm-verify-desc">Perfis verificados recebem 3x mais conexões. Vincule suas redes sociais.</p>
                             <div class="rm-verify-row">
                                 <div class="rm-verify-item" id="verifyInstagramItem">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E4405F" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
@@ -2094,10 +2239,10 @@
                                 <div class="rm-verify-item" id="verifyFacebookItem">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1877F2" stroke-width="2"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
                                     <span>Facebook</span>
-                                    <button type="button" class="btn btn-sm btn-accent" onclick="verifySocial('facebook', event)">Conectar Facebook</button>
+                                    <button type="button" class="btn btn-sm btn-accent" onclick="verifySocial('facebook', event)">Vincular perfil</button>
                                 </div>
                             </div>
-                            <p class="rm-verify-hint" style="font-size:.78rem;color:var(--text-secondary);margin-top:8px">Facebook: login real via OAuth. Instagram: informe seu @ e ele ficará visível no perfil.</p>
+                            <p class="rm-verify-hint" style="font-size:.78rem;color:var(--text-secondary);margin-top:8px">Instagram: verificação por código na bio. Facebook: cole a URL do seu perfil.</p>
                         </div>
 
                         <!-- Verificação de Identidade -->
@@ -3473,7 +3618,7 @@
                     </div>
                     <label class="terms-checkbox-label">
                         <input type="checkbox" id="regTerms" required class="terms-checkbox">
-                        <span>Li e aceito os <a href="#" onclick="event.preventDefault();showPage('terms')" class="terms-link">Termos de Uso</a> e a <a href="#" onclick="event.preventDefault();showPage('privacy')" class="terms-link">Política de Privacidade</a></span>
+                        <span>Li e aceito os <a href="javascript:void(0)" onclick="event.preventDefault();showPage('terms')" class="terms-link">Termos de Uso</a> e a <a href="javascript:void(0)" onclick="event.preventDefault();showPage('privacy')" class="terms-link">Política de Privacidade</a></span>
                     </label>
                     <button type="submit" class="btn btn-accent w100">Cadastrar</button>
                     <div class="form-feedback" id="registerFeedback"></div>
@@ -3776,14 +3921,121 @@
                     '<p class="owner-rental-address">' + escapeHtml(prop.neighborhood || '') + ' — R$ ' + (prop.price || 0).toLocaleString('pt-BR') + '/mês</p>' +
                     '<div class="owner-rental-tenants"><h5>Inquilinos</h5>' + tenantList + '</div>' +
                     '<div class="owner-rental-summary"><span>Aluguel: R$ ' + r.rentAmount + '</span><span>Taxa (8%): R$ ' + r.feeAmount + '</span><span>Total/pessoa: R$ ' + r.totalPerTenant + '</span></div>' +
+                    '<div class="contract-section" id="contractSection-' + r._id + '">' +
+                        '<div class="contract-header"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Contrato</div>' +
+                        '<div class="contract-progress"><div class="contract-progress-bar"><div class="contract-progress-fill" id="contractFill-' + r._id + '" style="width:0%"></div></div><span class="contract-progress-text" id="contractText-' + r._id + '">Carregando...</span></div>' +
+                        '<div class="contract-parties" id="contractParties-' + r._id + '"></div>' +
+                        '<div class="contract-actions">' +
+                            '<button class="btn btn-accent btn-sm" onclick="downloadContract(\'' + r._id + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar PDF</button>' +
+                            '<button class="btn btn-outline btn-sm" onclick="notifyTenantsContract(\'' + r._id + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Enviar por email</button>' +
+                            '<button class="btn btn-outline btn-sm" onclick="acceptContract(\'' + r._id + '\')">Aceitar contrato</button>' +
+                        '</div>' +
+                    '</div>' +
                 '</div>';
             }).join('');
+            // Load contract status for each rental
+            rentals.forEach(function(r) { loadContractStatus(r._id); });
         } catch(e) {}
+    }
+
+    async function loadContractStatus(rentalId) {
+        try {
+            var res = await fetch(API + '/payments/contract/' + rentalId + '/status', { headers: { 'Authorization': 'Bearer ' + currentToken }});
+            var data = await res.json();
+            var parties = data.parties || [];
+            var total = parties.length;
+            var accepted = parties.filter(function(p) { return p.accepted; }).length;
+            var pct = total > 0 ? Math.round((accepted / total) * 100) : 0;
+
+            var fillEl = document.getElementById('contractFill-' + rentalId);
+            var textEl = document.getElementById('contractText-' + rentalId);
+            var partiesEl = document.getElementById('contractParties-' + rentalId);
+
+            if (fillEl) fillEl.style.width = pct + '%';
+            if (textEl) textEl.textContent = accepted + '/' + total + ' assinaturas';
+
+            if (partiesEl) {
+                partiesEl.innerHTML = parties.map(function(p) {
+                    var icon = p.accepted ? '<div class="contract-party-check done">&#10003;</div>' : '<div class="contract-party-check pending">&#8943;</div>';
+                    var role = p.role === 'owner' ? 'Proprietário' : 'Inquilino';
+                    var when = p.acceptedAt ? ' — ' + new Date(p.acceptedAt).toLocaleDateString('pt-BR') : '';
+                    return '<div class="contract-party">' + icon + '<span>' + escapeHtml(p.name) + ' (' + role + ')' + when + '</span></div>';
+                }).join('');
+            }
+        } catch(e) {}
+    }
+
+    async function downloadContract(rentalId) {
+        try {
+            showToast('Gerando contrato PDF...', 'info');
+            var res = await fetch(API + '/payments/contract/' + rentalId, { headers: { 'Authorization': 'Bearer ' + currentToken }});
+            if (!res.ok) { showToast('Erro ao gerar contrato', 'error'); return; }
+            var blob = await res.blob();
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'contrato-morajunto.pdf';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Contrato baixado!', 'success');
+        } catch(e) { showToast('Erro ao baixar contrato', 'error'); }
+    }
+
+    async function notifyTenantsContract(rentalId) {
+        try {
+            var res = await fetch(API + '/payments/contract/' + rentalId + '/notify', {
+                method: 'POST', headers: { 'Authorization': 'Bearer ' + currentToken }
+            });
+            var data = await res.json();
+            if (res.ok) {
+                showToast(data.message || 'Contrato enviado!', 'success');
+            } else {
+                showToast(data.error || 'Erro ao enviar', 'error');
+            }
+        } catch(e) { showToast('Erro de conexão', 'error'); }
+    }
+
+    function acceptContract(rentalId) {
+        // Show accept modal
+        var overlay = document.getElementById('contractAcceptOverlay');
+        if (overlay) {
+            overlay.dataset.rentalId = rentalId;
+            overlay.classList.add('open');
+            var checkbox = document.getElementById('contractAcceptCheck');
+            if (checkbox) checkbox.checked = false;
+        }
+    }
+
+    async function confirmAcceptContract() {
+        var overlay = document.getElementById('contractAcceptOverlay');
+        var checkbox = document.getElementById('contractAcceptCheck');
+        if (!checkbox || !checkbox.checked) { showToast('Marque que leu e aceita os termos', 'warning'); return; }
+        var rentalId = overlay.dataset.rentalId;
+        try {
+            var res = await fetch(API + '/payments/contract/' + rentalId + '/accept', {
+                method: 'POST', headers: { 'Authorization': 'Bearer ' + currentToken }
+            });
+            var data = await res.json();
+            if (res.ok) {
+                showToast(data.allPartiesAccepted ? 'Contrato assinado por todas as partes!' : 'Contrato aceito! ' + data.acceptedCount + '/' + data.totalParties + ' assinaturas', 'success');
+                overlay.classList.remove('open');
+                loadContractStatus(rentalId);
+                if (typeof loadTenantContractStatus === 'function') loadTenantContractStatus();
+            } else {
+                showToast(data.error || 'Erro', 'error');
+            }
+        } catch(e) { showToast('Erro de conexão', 'error'); }
+    }
+
+    function closeContractModal() {
+        var overlay = document.getElementById('contractAcceptOverlay');
+        if (overlay) overlay.classList.remove('open');
     }
     // Tenant panel — uses new /api/payments system
     async function loadTenantPanel() {
         if (!currentToken) return;
         loadTransparencyPanel();
+        loadTenantContractStatus();
         try {
             var res = await fetch(API + '/payments/tenant', { headers: { 'Authorization': 'Bearer ' + currentToken }});
             var data = await res.json();
@@ -3810,6 +4062,59 @@
                 '</div>';
             }).join('');
         } catch(e) { console.error(e); }
+    }
+
+    async function loadTenantContractStatus() {
+        try {
+            var res = await fetch(API + '/payments/tenant', { headers: { 'Authorization': 'Bearer ' + currentToken }});
+            var data = await res.json();
+            var txs = data.transactions || [];
+            if (!txs.length) return;
+
+            // Get unique rental IDs
+            var rentalIds = [];
+            txs.forEach(function(tx) { if (tx.rental && rentalIds.indexOf(tx.rental) === -1) rentalIds.push(tx.rental); });
+
+            var contractHtml = '';
+            for (var i = 0; i < rentalIds.length; i++) {
+                try {
+                    var statusRes = await fetch(API + '/payments/contract/' + rentalIds[i] + '/status', { headers: { 'Authorization': 'Bearer ' + currentToken }});
+                    if (!statusRes.ok) continue;
+                    var statusData = await statusRes.json();
+                    var parties = statusData.parties || [];
+                    var total = parties.length;
+                    var accepted = parties.filter(function(p) { return p.accepted; }).length;
+                    var pct = total > 0 ? Math.round((accepted / total) * 100) : 0;
+                    var allSigned = statusData.allAccepted;
+
+                    var badgeClass = allSigned ? 'contract-badge-signed' : (accepted > 0 ? 'contract-badge-partial' : 'contract-badge-pending');
+                    var badgeText = allSigned ? 'Assinado' : (accepted > 0 ? accepted + '/' + total + ' assinaturas' : 'Pendente');
+
+                    contractHtml += '<div class="contract-card">' +
+                        '<div class="contract-card-title"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Contrato de Locação <span class="contract-badge ' + badgeClass + '">' + badgeText + '</span></div>' +
+                        '<div class="contract-progress"><div class="contract-progress-bar"><div class="contract-progress-fill" style="width:' + pct + '%"></div></div><span class="contract-progress-text">' + accepted + '/' + total + '</span></div>' +
+                        '<div class="contract-parties">' +
+                            parties.map(function(p) {
+                                var icon = p.accepted ? '<div class="contract-party-check done">&#10003;</div>' : '<div class="contract-party-check pending">&#8943;</div>';
+                                var role = p.role === 'owner' ? 'Proprietário' : 'Inquilino';
+                                var when = p.acceptedAt ? ' — ' + new Date(p.acceptedAt).toLocaleDateString('pt-BR') : '';
+                                return '<div class="contract-party">' + icon + '<span>' + escapeHtml(p.name) + ' (' + role + ')' + when + '</span></div>';
+                            }).join('') +
+                        '</div>' +
+                        '<div class="contract-actions">' +
+                            '<button class="btn btn-accent btn-sm" onclick="downloadContract(\'' + rentalIds[i] + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar PDF</button>' +
+                            (!allSigned ? '<button class="btn btn-outline btn-sm" onclick="acceptContract(\'' + rentalIds[i] + '\')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Aceitar contrato</button>' : '') +
+                        '</div>' +
+                    '</div>';
+                } catch(e) {}
+            }
+
+            var contractContainer = document.getElementById('tenantTransparency');
+            if (contractContainer && contractHtml) {
+                contractContainer.innerHTML = contractHtml;
+                contractContainer.classList.remove('hidden');
+            }
+        } catch(e) {}
     }
 
     var pixPolling = null;
@@ -4882,5 +5187,34 @@
         }
     })();
     </script>
+
+    <!-- Contract Accept Modal -->
+    <div class="contract-accept-overlay" id="contractAcceptOverlay">
+        <div class="contract-accept-modal">
+            <h3>Aceite Digital do Contrato</h3>
+            <p>Ao aceitar, voce concorda com todas as clausulas do contrato de locacao. O aceite digital tem validade juridica conforme MP 2.200-2/2001.</p>
+            <div class="contract-accept-terms">
+                <strong>Resumo dos termos principais:</strong><br><br>
+                - Prazo: 12 meses com renovacao automatica<br>
+                - Pagamento ate o dia 10 de cada mes via PIX<br>
+                - Caucao equivalente a 3 meses de aluguel<br>
+                - Reajuste anual pelo IGP-M/FGV<br>
+                - Multa de 2% + juros de 1% a.m. por atraso<br>
+                - Rescisao antecipada: multa de 3 alugueis proporcional<br>
+                - Responsabilidade solidaria em moradia compartilhada<br>
+                - Taxa de servico MoraJunto cobrada do inquilino<br>
+                - Vistoria de entrada e saida documentada<br><br>
+                <strong>Para ler o contrato completo, baixe o PDF antes de aceitar.</strong>
+            </div>
+            <label class="contract-accept-check">
+                <input type="checkbox" id="contractAcceptCheck">
+                <span>Li e aceito todas as clausulas do contrato de locacao residencial intermediado pela plataforma MoraJunto</span>
+            </label>
+            <div class="contract-accept-actions">
+                <button class="btn btn-outline" onclick="closeContractModal()">Cancelar</button>
+                <button class="btn btn-accent" onclick="confirmAcceptContract()">Aceitar e assinar</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

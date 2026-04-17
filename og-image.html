@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@600&display=swap');
+
+  body {
+    width: 1200px;
+    height: 630px;
+    overflow: hidden;
+    font-family: 'DM Sans', sans-serif;
+    background: #0F0D1A;
+    position: relative;
+  }
+
+  /* Background gradient */
+  .bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 15% 50%, rgba(139,92,246,.2) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 40% at 85% 30%, rgba(139,92,246,.12) 0%, transparent 60%),
+      linear-gradient(170deg, #0F0D1A 0%, #1a1630 50%, #0F0D1A 100%);
+  }
+
+  /* Noise grain */
+  .grain {
+    position: absolute;
+    inset: 0;
+    opacity: .04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 128px 128px;
+  }
+
+  .content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 60px 80px;
+    gap: 60px;
+  }
+
+  .left {
+    flex: 1;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    background: rgba(139,92,246,.15);
+    border: 1px solid rgba(139,92,246,.25);
+    border-radius: 100px;
+    color: #C4B5FD;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 28px;
+  }
+
+  .badge-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22C55E;
+  }
+
+  h1 {
+    font-size: 56px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin-bottom: 20px;
+  }
+
+  h1 span {
+    background: linear-gradient(135deg, #C4B5FD, #A78BFA, #8B5CF6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    font-size: 20px;
+    color: rgba(255,255,255,.6);
+    line-height: 1.5;
+    max-width: 440px;
+    margin-bottom: 32px;
+  }
+
+  .pills {
+    display: flex;
+    gap: 10px;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 100px;
+    color: rgba(255,255,255,.8);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .pill svg {
+    flex-shrink: 0;
+  }
+
+  .right {
+    flex-shrink: 0;
+    position: relative;
+    width: 380px;
+    height: 400px;
+  }
+
+  /* Mockup cards */
+  .card {
+    position: absolute;
+    width: 280px;
+    border-radius: 18px;
+    background: rgba(28,25,48,.95);
+    border: 1px solid rgba(255,255,255,.1);
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    padding: 22px;
+  }
+
+  .card-1 {
+    top: 0;
+    right: 0;
+    transform: rotate(-2deg);
+  }
+
+  .card-2 {
+    bottom: 0;
+    left: 0;
+    transform: rotate(2deg);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8B5CF6, #A78BFA);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  .card-name {
+    color: #fff;
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  .card-detail {
+    color: rgba(255,255,255,.45);
+    font-size: 12px;
+  }
+
+  .tags {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .tag {
+    padding: 4px 10px;
+    border-radius: 100px;
+    background: rgba(139,92,246,.15);
+    color: #C4B5FD;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .budget {
+    color: rgba(255,255,255,.5);
+    font-size: 13px;
+  }
+
+  .budget strong {
+    color: #10b981;
+  }
+
+  .prop-title {
+    color: #fff;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  .prop-price {
+    color: #10b981;
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 10px;
+  }
+
+  .prop-price small {
+    color: rgba(255,255,255,.4);
+    font-weight: 400;
+    font-size: 12px;
+  }
+
+  .amenities {
+    display: flex;
+    gap: 12px;
+    color: rgba(255,255,255,.45);
+    font-size: 11px;
+  }
+
+  /* Match badge */
+  .match-badge {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 8px 30px rgba(139,92,246,.5), 0 0 0 4px rgba(139,92,246,.15);
+    z-index: 3;
+  }
+
+  .match-val {
+    font-weight: 800;
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .match-label {
+    font-size: 10px;
+    font-weight: 500;
+    opacity: .85;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+
+  /* Logo + url bottom */
+  .bottom-bar {
+    position: absolute;
+    bottom: 40px;
+    left: 80px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 2;
+  }
+
+  .url {
+    color: rgba(255,255,255,.4);
+    font-size: 15px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+  }
+
+  .ig {
+    color: rgba(255,255,255,.35);
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+  }
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="grain"></div>
+
+  <div class="content">
+    <div class="left">
+      <div class="badge">
+        <span class="badge-dot"></span>
+        Moradia compartilhada
+      </div>
+
+      <h1>Divida o aluguel<br><span>com gente de<br>confianca</span></h1>
+
+      <p class="subtitle">Match inteligente + CPF verificado + Republicas perto da sua faculdade em Ribeirao Preto.</p>
+
+      <div class="pills">
+        <span class="pill">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          100% gratis
+        </span>
+        <span class="pill">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          CPF verificado
+        </span>
+        <span class="pill">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Ribeirao Preto
+        </span>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="card card-1">
+        <div class="card-header">
+          <div class="avatar">M</div>
+          <div>
+            <div class="card-name">Marina, 22</div>
+            <div class="card-detail">USP &middot; Medicina</div>
+          </div>
+        </div>
+        <div class="tags">
+          <span class="tag">Organizada</span>
+          <span class="tag">Nao fuma</span>
+          <span class="tag">Estuda a noite</span>
+        </div>
+        <div class="budget">Orcamento: <strong>R$750/mes</strong></div>
+      </div>
+
+      <div class="card card-2">
+        <div class="prop-title">Apto 2 quartos &middot; Ribeir&acirc;nia</div>
+        <div class="prop-price">R$1.500/mes <small>&divide; 2 = R$750</small></div>
+        <div class="amenities">
+          <span>2 quartos</span>
+          <span>1 banheiro</span>
+          <span>Wi-Fi</span>
+        </div>
+      </div>
+
+      <div class="match-badge">
+        <span class="match-val">92%</span>
+        <span class="match-label">match</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <span class="url">morajunto.com.br</span>
+    <span class="ig">&middot; @morajunto</span>
+  </div>
+</body>
+</html>

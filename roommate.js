@@ -248,35 +248,102 @@ function verifySocial(platform, evt) {
     }
 
     if (platform === 'facebook') {
-        // Real Facebook OAuth — redirect to Facebook login
-        window.location.href = API + '/auth/facebook?token=' + encodeURIComponent(currentToken);
+        // Facebook: usuário cola URL do perfil
+        var fbBtn = event ? event.target.closest('.rm-verify-item') : null;
+        showCustomModal('Facebook', 'Cole a URL do seu perfil do Facebook:\nEx: https://facebook.com/seuperfil', true, true).then(function(url) {
+            if (!url) return;
+            url = url.trim();
+            if (!url) return;
+
+            var actionBtn = fbBtn ? fbBtn.querySelector('button') : null;
+            if (actionBtn) { actionBtn.textContent = 'Verificando...'; actionBtn.disabled = true; }
+
+            fetch(API + '/auth/verify-facebook', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
+                body: JSON.stringify({ url: url })
+            }).then(function(res) { return res.json(); }).then(function(data) {
+                if (data.success) {
+                    if (actionBtn) actionBtn.outerHTML = '<span class="verified-check">' + data.handle + '</span>';
+                    showToast('Facebook vinculado com sucesso!', 'success');
+                } else {
+                    if (actionBtn) { actionBtn.textContent = 'Conectar'; actionBtn.disabled = false; }
+                    showCustomModal('Erro', data.error || 'URL inv��lida', false, false);
+                }
+            }).catch(function() {
+                if (actionBtn) { actionBtn.textContent = 'Conectar'; actionBtn.disabled = false; }
+            });
+        });
         return;
     }
 
     if (platform === 'instagram') {
-        // Instagram: user provides handle via custom modal
-        var evtBtn = event ? event.target.closest('.rm-verify-item') : null;
+        // Instagram: verificação em 2 etapas
+        var igBtn = event ? event.target.closest('.rm-verify-item') : null;
         showCustomModal('Instagram', 'Digite seu @ do Instagram (sem o @):', true, true).then(function(handle) {
             if (!handle) return;
             handle = handle.replace('@', '').trim();
             if (!handle) return;
 
-            var actionBtn = evtBtn ? evtBtn.querySelector('button') : null;
-            if (actionBtn) { actionBtn.textContent = 'Salvando...'; actionBtn.disabled = true; }
+            var actionBtn = igBtn ? igBtn.querySelector('button') : null;
+            if (actionBtn) { actionBtn.textContent = 'Gerando código...'; actionBtn.disabled = true; }
 
+            // Etapa 1: gerar código
             fetch(API + '/auth/verify-instagram', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken },
                 body: JSON.stringify({ handle: handle })
             }).then(function(res) { return res.json(); }).then(function(data) {
-                if (data.success) {
-                    if (actionBtn) actionBtn.outerHTML = '<span class="verified-check">@' + handle + '</span>';
-                } else {
-                    if (actionBtn) { actionBtn.textContent = 'Verificar'; actionBtn.disabled = false; }
+                if (!data.success) {
+                    if (actionBtn) { actionBtn.textContent = 'Informar @'; actionBtn.disabled = false; }
                     showCustomModal('Erro', data.error || 'Erro', false, false);
-            }
+                    return;
+                }
+
+                // Mostrar código e pedir para colocar na bio
+                showCustomModal(
+                    'Verificar Instagram',
+                    'Coloque este código na sua bio do Instagram:\n\n' + data.verifyCode + '\n\nDepois clique OK. Você pode remover o código da bio após verificar.\n\n(Seu perfil precisa estar público)',
+                    true, false
+                ).then(function(confirmed) {
+                    if (!confirmed && confirmed !== '') return;
+
+                    if (actionBtn) actionBtn.textContent = 'Verificando...';
+
+                    // Etapa 2: confirmar
+                    fetch(API + '/auth/verify-instagram/confirm', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken }
+                    }).then(function(res) { return res.json(); }).then(function(result) {
+                        if (result.verified) {
+                            if (actionBtn) actionBtn.outerHTML = '<span class="verified-check">@' + handle + ' ✓</span>';
+                            showToast('Instagram verificado!', 'success');
+                        } else {
+                            // Oferecer pular verificação
+                            showCustomModal(
+                                'Não verificado',
+                                result.message + '\n\nDeseja salvar o handle mesmo sem verificação?',
+                                true, false
+                            ).then(function(skip) {
+                                if (skip || skip === '') {
+                                    fetch(API + '/auth/verify-instagram/skip', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + currentToken }
+                                    }).then(function() {
+                                        if (actionBtn) actionBtn.outerHTML = '<span class="verified-check" style="opacity:0.7">@' + handle + '</span>';
+                                        showToast('Handle salvo (sem verificação)', 'info');
+                                    });
+                                } else {
+                                    if (actionBtn) { actionBtn.textContent = 'Informar @'; actionBtn.disabled = false; }
+                                }
+                            });
+                        }
+                    }).catch(function() {
+                        if (actionBtn) { actionBtn.textContent = 'Informar @'; actionBtn.disabled = false; }
+                    });
+                });
             }).catch(function() {
-                if (actionBtn) { actionBtn.textContent = 'Verificar'; actionBtn.disabled = false; }
+                if (actionBtn) { actionBtn.textContent = 'Informar @'; actionBtn.disabled = false; }
             });
         });
         return;
@@ -290,10 +357,11 @@ function setScaleValue(field, value) {
     if (!container) return;
     const dots = container.querySelectorAll('.rm-dot');
     dots.forEach((dot, i) => {
-        if (i < value) {
+        dot.classList.remove('active', 'filled');
+        if (i === value - 1) {
             dot.classList.add('active');
-        } else {
-            dot.classList.remove('active');
+        } else if (i < value - 1) {
+            dot.classList.add('filled');
         }
     });
 }
@@ -328,11 +396,65 @@ function getSleepLabel(field, value) {
     return labels[field] ? labels[field][value] || '' : '';
 }
 
-function selectIncome(btn) {
-    document.querySelectorAll('.rm-income-btn').forEach(function(b) { b.classList.remove('active'); });
-    btn.classList.add('active');
-    document.getElementById('rmSalary').value = btn.dataset.val;
+function selectIncome(card) {
+    document.querySelectorAll('.rm-income-card').forEach(function(c) { c.classList.remove('active'); });
+    card.classList.add('active');
+    document.getElementById('rmSalary').value = card.dataset.val;
 }
+
+// Hood chips click + search filter
+(function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        var chipsContainer = document.getElementById('rmHoodChips');
+        if (chipsContainer) {
+            chipsContainer.addEventListener('click', function(e) {
+                var chip = e.target.closest('.rm-hood-chip');
+                if (!chip || chip.classList.contains('disabled')) return;
+
+                // Ripple effect
+                chip.classList.remove('rm-hood-chip--ripple');
+                void chip.offsetWidth;
+                chip.classList.add('rm-hood-chip--ripple');
+
+                chip.classList.toggle('selected');
+                var allChips = chipsContainer.querySelectorAll('.rm-hood-chip');
+                var selected = chipsContainer.querySelectorAll('.rm-hood-chip.selected');
+
+                // Enable/disable based on max 3
+                allChips.forEach(function(c) {
+                    if (selected.length >= 3 && !c.classList.contains('selected')) {
+                        c.classList.add('disabled');
+                    } else {
+                        c.classList.remove('disabled');
+                    }
+                });
+
+                // Update hidden input
+                var vals = [];
+                selected.forEach(function(s) { vals.push(s.dataset.v); });
+                document.getElementById('rmNeighborhoods').value = vals.join(',');
+            });
+        }
+
+        var searchInput = document.getElementById('rmHoodSearch');
+        if (!searchInput) return;
+        searchInput.addEventListener('input', function() {
+            var query = this.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            var groups = document.querySelectorAll('.rm-hood-group');
+            groups.forEach(function(group) {
+                var chips = group.querySelectorAll('.rm-hood-chip');
+                var anyVisible = false;
+                chips.forEach(function(chip) {
+                    var text = (chip.dataset.v + ' ' + chip.textContent).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                    var match = !query || text.indexOf(query) !== -1;
+                    chip.style.display = match ? '' : 'none';
+                    if (match) anyVisible = true;
+                });
+                group.style.display = anyVisible ? '' : 'none';
+            });
+        });
+    });
+})();
 
 function toggleRmSwitch(id) {
     const el = document.getElementById(id);
