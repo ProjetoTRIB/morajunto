@@ -67,7 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadStats();
     animateStatsOnScroll();
     handleFacebookCallback();
-    initExitIntentPopup();
     animateRefCounter();
     initHeroParallax();
 });
@@ -1565,35 +1564,6 @@ function removeRefPhoto(idx) {
     files.forEach(function(f, i) { if (i !== idx) dt.items.add(f); });
     input.files = dt.files;
     previewRefPhotos(input);
-}
-
-// ===== EXIT INTENT POPUP =====
-function initExitIntentPopup() {
-    // Desktop: mouse leaves viewport
-    document.addEventListener('mouseout', function(e) {
-        if (e.clientY < 5 && !sessionStorage.getItem('refPopupShown')) {
-            showRefPopup();
-        }
-    });
-    // Mobile: after 30 seconds
-    setTimeout(function() {
-        if (!sessionStorage.getItem('refPopupShown')) {
-            showRefPopup();
-        }
-    }, 30000);
-}
-
-function showRefPopup() {
-    var overlay = document.getElementById('refPopupOverlay');
-    if (overlay) {
-        overlay.style.display = 'flex';
-        sessionStorage.setItem('refPopupShown', '1');
-    }
-}
-
-function closeRefPopup() {
-    var overlay = document.getElementById('refPopupOverlay');
-    if (overlay) overlay.style.display = 'none';
 }
 
 // ===== ANIMATED REFERRAL COUNTER =====
