@@ -470,4 +470,100 @@ router.put('/users/:id/suspend', validateId('id'), async (req, res) => {
     }
 });
 
+// POST /api/admin/cleanup-seed-data — remove dados seed/beta
+// Body: { execute: true } para apagar; sem execute = dry-run.
+// Preserva: role=admin e ADMIN_EMAIL do env.
+// Critério seed: email matches @teste.com / ^test@ / ^fake@ / ^seed@ / ^mock@ / ^example@
+const Notification = require('../models/Notification');
+router.post('/cleanup-seed-data', async (req, res) => {
+    try {
+        var execute = req.body && req.body.execute === true;
+        var adminEmail = (process.env.ADMIN_EMAIL || 'thalis132008@gmail.com').toLowerCase();
+        var patterns = [/@teste\.com$/i, /^test[0-9_.-]*@/i, /^fake[0-9_.-]*@/i, /^seed[0-9_.-]*@/i, /^mock[0-9_.-]*@/i, /^example[0-9_.-]*@/i];
+        function isSeedEmail(email) {
+            if (!email) return false;
+            var e = email.toLowerCase();
+            if (e === adminEmail) return false;
+            return patterns.some(function(rx) { return rx.test(e); });
+        }
+
+        var allUsers = await User.find({}).select('_id email name role').lean();
+        var seedUsers = allUsers.filter(function(u) {
+            if (u.role === 'admin') return false;
+            return isSeedEmail(u.email);
+        });
+        var seedUserIds = seedUsers.map(function(u) { return u._id; });
+
+        var seedProperties = await Property.find({
+            $or: [{ agency: { $in: seedUserIds } }, { owner: { $in: seedUserIds } }]
+        }).select('_id title').lean();
+        var seedPropertyIds = seedProperties.map(function(p) { return p._id; });
+
+        var seedRentals = await Rental.find({
+            $or: [
+                { owner: { $in: seedUserIds } },
+                { tenants: { $in: seedUserIds } },
+                { property: { $in: seedPropertyIds } }
+            ]
+        }).select('_id').lean();
+        var seedRentalIds = seedRentals.map(function(r) { return r._id; });
+
+        var txCount = await PaymentTransaction.countDocuments({
+            $or: [
+                { tenant: { $in: seedUserIds } },
+                { owner: { $in: seedUserIds } },
+                { rental: { $in: seedRentalIds } }
+            ]
+        });
+        var notifCount = await Notification.countDocuments({ user: { $in: seedUserIds } });
+
+        var summary = {
+            users: seedUsers.length,
+            properties: seedProperties.length,
+            rentals: seedRentals.length,
+            paymentTransactions: txCount,
+            notifications: notifCount,
+            sampleUsers: seedUsers.slice(0, 10).map(function(u) { return u.email; }),
+            sampleProperties: seedProperties.slice(0, 5).map(function(p) { return p.title; })
+        };
+
+        if (!execute) {
+            return res.json({ mode: 'dry-run', summary: summary, message: 'Nada foi apagado. Envie { execute: true } para apagar.' });
+        }
+
+        var deleted = { users: 0, properties: 0, rentals: 0, paymentTransactions: 0, notifications: 0 };
+
+        if (notifCount > 0) {
+            var rN = await Notification.deleteMany({ user: { $in: seedUserIds } });
+            deleted.notifications = rN.deletedCount;
+        }
+        if (txCount > 0) {
+            var rT = await PaymentTransaction.deleteMany({
+                $or: [
+                    { tenant: { $in: seedUserIds } },
+                    { owner: { $in: seedUserIds } },
+                    { rental: { $in: seedRentalIds } }
+                ]
+            });
+            deleted.paymentTransactions = rT.deletedCount;
+        }
+        if (seedRentalIds.length > 0) {
+            var rR = await Rental.deleteMany({ _id: { $in: seedRentalIds } });
+            deleted.rentals = rR.deletedCount;
+        }
+        if (seedPropertyIds.length > 0) {
+            var rP = await Property.deleteMany({ _id: { $in: seedPropertyIds } });
+            deleted.properties = rP.deletedCount;
+        }
+        if (seedUserIds.length > 0) {
+            var rU = await User.deleteMany({ _id: { $in: seedUserIds } });
+            deleted.users = rU.deletedCount;
+        }
+
+        res.json({ mode: 'execute', summary: summary, deleted: deleted });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro na limpeza: ' + e.message });
+    }
+});
+
 module.exports = router;
