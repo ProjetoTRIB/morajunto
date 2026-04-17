@@ -359,16 +359,7 @@ var SEO_CACHE_TTL = 1800000;
 // Helper para escapar HTML
 function escHtml(str) { return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-// Helper para regex sem acento (mesmo do properties.js)
-function bairroRegex(str) {
-    var map = { 'a': '[aáàâã]', 'e': '[eéèê]', 'i': '[iíì]', 'o': '[oóòôõ]', 'u': '[uúù]', 'c': '[cç]', 'n': '[nñ]' };
-    var pattern = '';
-    for (var i = 0; i < str.length; i++) {
-        var ch = str[i].toLowerCase();
-        pattern += map[ch] || str[i].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
-    return new RegExp(pattern, 'i');
-}
+var { accentRegex: bairroRegex } = require('./backend/utils/textSearch');
 
 // Helper: tier label e cor
 function tierInfo(tier) {
@@ -947,16 +938,39 @@ async function start() {
     });
 }
 
-// ===== CRON: Daily payment reminders (9h Brasilia = 12h UTC) =====
+// ===== CRON JOBS =====
 var cron = require('node-cron');
 var { runDailyReminders } = require('./backend/services/reminderService');
-cron.schedule('0 12 * * *', async function() {
+var { autoGenerateMonthlyCharges, autoTransferToOwners } = require('./backend/services/paymentCron');
+
+var cronOpts = { timezone: 'America/Sao_Paulo' };
+
+// Lembretes diários (9h Brasília)
+cron.schedule('0 9 * * *', async function() {
     try {
         await runDailyReminders(io, onlineUsers);
     } catch (e) {
         console.error('Reminder cron error:', e.message);
     }
-});
+}, cronOpts);
+
+// Auto-gerar cobranças mensais (8h Brasília)
+cron.schedule('0 8 * * *', async function() {
+    try {
+        await autoGenerateMonthlyCharges();
+    } catch (e) {
+        console.error('Auto-generate cron error:', e.message);
+    }
+}, cronOpts);
+
+// Auto-repasse para proprietários (14h Brasília)
+cron.schedule('0 14 * * *', async function() {
+    try {
+        await autoTransferToOwners();
+    } catch (e) {
+        console.error('Auto-transfer cron error:', e.message);
+    }
+}, cronOpts);
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

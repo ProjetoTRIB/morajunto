@@ -20,24 +20,7 @@ function requireDB(req, res, next) {
 
 router.use(requireDB);
 
-function escapeRegex(str) {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-// Gera regex que ignora acentos (ex: "sumare" encontra "Sumaré")
-function accentRegex(str) {
-    var map = {
-        'a': '[aáàâã]', 'e': '[eéèê]', 'i': '[iíì]', 'o': '[oóòôõ]', 'u': '[uúù]',
-        'c': '[cç]', 'n': '[nñ]'
-    };
-    var escaped = escapeRegex(str);
-    var pattern = '';
-    for (var i = 0; i < escaped.length; i++) {
-        var ch = escaped[i].toLowerCase();
-        pattern += map[ch] || escaped[i];
-    }
-    return new RegExp(pattern, 'i');
-}
+var { escapeRegex, accentRegex } = require('../utils/textSearch');
 
 var leadLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
