@@ -66,7 +66,10 @@ router.get('/leads', async (req, res) => {
 // GET /api/admin/agencies — todas as imobiliárias
 router.get('/agencies', async (req, res) => {
     try {
-        var agencies = await User.find({ role: 'agency' }).select('-password').sort({ createdAt: -1 });
+        var page = Math.max(1, parseInt(req.query.page) || 1);
+        var limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+        var skip = (page - 1) * limit;
+        var agencies = await User.find({ role: 'agency' }).select('-password').sort({ createdAt: -1 }).skip(skip).limit(limit);
         var agencyIds = agencies.map(function(a) { return a._id; });
         var counts = await Property.aggregate([
             { $match: { agency: { $in: agencyIds } } },
@@ -416,11 +419,16 @@ router.get('/users', async (req, res) => {
                 { email: { $regex: s, $options: 'i' } }
             ];
         }
+        var page = Math.max(1, parseInt(req.query.page) || 1);
+        var limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+        var skip = (page - 1) * limit;
+        var total = await User.countDocuments(query);
         var users = await User.find(query)
             .select('-password -verificationCode')
             .sort({ createdAt: -1 })
-            .limit(200);
-        res.json({ users });
+            .skip(skip)
+            .limit(limit);
+        res.json({ users, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
     } catch (e) {
         res.status(500).json({ error: 'Erro ao listar usuários' });
     }
