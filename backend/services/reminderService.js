@@ -1,6 +1,9 @@
 const PaymentTransaction = require('../models/PaymentTransaction');
 const Notification = require('../models/Notification');
 const Rental = require('../models/Rental');
+const User = require('../models/User');
+const Property = require('../models/Property');
+const emailService = require('./emailService');
 
 /**
  * Run daily reminders for pending payments.
@@ -44,6 +47,20 @@ async function runDailyReminders(io, onlineUsers) {
             return !existing;
         }
 
+        // 3 days before due date
+        if (diffDays === 3) {
+            if (await shouldNotify(tx.tenant._id, 'payment_reminder_3d', tx._id)) {
+                await createAndEmit(tx.tenant._id, 'payment_reminder_3d',
+                    'Aluguel vence em 3 dias',
+                    'Seu aluguel de ' + amount + ' (' + propTitle + ') vence em 3 dias, dia ' + dueDate.getDate() + '.',
+                    tx, io, onlineUsers);
+                // Enviar email de lembrete
+                var tenant3d = await User.findById(tx.tenant._id);
+                if (tenant3d) emailService.sendPaymentReminderEmail(tenant3d.email, tenant3d.name, tx.totalAmount, tx.dueDate, propTitle);
+                created++;
+            }
+        }
+
         // 1 day before due date
         if (diffDays === 1) {
             if (await shouldNotify(tx.tenant._id, 'payment_reminder', tx._id)) {
@@ -62,11 +79,27 @@ async function runDailyReminders(io, onlineUsers) {
                     'Aluguel vence hoje!',
                     'Seu aluguel de ' + amount + ' (' + propTitle + ') vence hoje. Pague pelo app para manter seu score.',
                     tx, io, onlineUsers);
+                // Enviar email no dia
+                var tenantDue = await User.findById(tx.tenant._id);
+                if (tenantDue) emailService.sendPaymentReminderEmail(tenantDue.email, tenantDue.name, tx.totalAmount, tx.dueDate, propTitle);
                 created++;
             }
         }
 
-        // 3 days late
+        // 1 day late — aviso para inquilino
+        if (diffDays === -1) {
+            if (await shouldNotify(tx.tenant._id, 'payment_late_1d', tx._id)) {
+                await createAndEmit(tx.tenant._id, 'payment_late_1d',
+                    'Pagamento atrasado!',
+                    'Seu aluguel de ' + amount + ' (' + propTitle + ') está 1 dia atrasado.',
+                    tx, io, onlineUsers);
+                var tenantLate1 = await User.findById(tx.tenant._id);
+                if (tenantLate1) emailService.sendPaymentLateEmail(tenantLate1.email, tenantLate1.name, tx.totalAmount, tx.dueDate, propTitle);
+                created++;
+            }
+        }
+
+        // 3 days late — aviso para inquilino + proprietário + roommates
         if (diffDays === -3) {
             if (await shouldNotify(tx.tenant._id, 'payment_late', tx._id)) {
                 await createAndEmit(tx.tenant._id, 'payment_late',
@@ -75,11 +108,17 @@ async function runDailyReminders(io, onlineUsers) {
                     tx, io, onlineUsers);
                 created++;
 
-                // Notify owner
+                // Email para inquilino
+                var tenantLate = await User.findById(tx.tenant._id);
+                if (tenantLate) emailService.sendPaymentLateEmail(tenantLate.email, tenantLate.name, tx.totalAmount, tx.dueDate, propTitle);
+
+                // Notify + email owner
                 await createAndEmit(tx.owner, 'roommate_late',
                     'Inquilino em atraso',
                     tx.tenantName + ' está 3 dias atrasado(a) no pagamento de ' + tx.month + '.',
                     tx, io, onlineUsers);
+                var ownerUser = await User.findById(tx.owner);
+                if (ownerUser) emailService.sendOwnerLateNoticeEmail(ownerUser.email, ownerUser.name, tx.tenantName, tx.totalAmount, tx.dueDate, propTitle);
 
                 // Notify other roommates
                 var rental = await Rental.findById(tx.rental);
